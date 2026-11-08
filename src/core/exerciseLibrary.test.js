@@ -75,16 +75,16 @@ describe('biblioteca inicial de ejercicios', () => {
 describe('niveles de los ejercicios de la biblioteca', () => {
   const scaleOf = (exercise) => DEFAULT_SCALES.find((s) => s.id === exercise.scaleId) ?? null
 
-  it('las dominadas van de banda verde a azul y terminan en "Sin banda"', () => {
+  it('las dominadas van de banda amarilla (la más dura, la que más ayuda) a azul y terminan en "Sin banda"', () => {
     const pullUp = DEFAULT_EXERCISES.find((e) => e.id === 'assisted-pull-up')
-    expect(levelsEasyToHard(pullUp, scaleOf(pullUp)).map((l) => l.id)).toEqual(['band-green', 'band-blue', 'none'])
+    expect(levelsEasyToHard(pullUp, scaleOf(pullUp)).map((l) => l.id)).toEqual(['band-yellow', 'band-green', 'band-blue', 'none'])
   })
 
   it('en los demás, de menos a más resistencia', () => {
     const squat = DEFAULT_EXERCISES.find((e) => e.id === 'goblet-squat')
     expect(levelsEasyToHard(squat, scaleOf(squat)).map((l) => l.id)).toEqual(['kg-0', 'kg-5', 'kg-10', 'kg-15', 'kg-20'])
     const row = DEFAULT_EXERCISES.find((e) => e.id === 'banded-row')
-    expect(levelsEasyToHard(row, scaleOf(row)).map((l) => l.id)).toEqual(['band-blue', 'band-green'])
+    expect(levelsEasyToHard(row, scaleOf(row)).map((l) => l.id)).toEqual(['band-blue', 'band-green', 'band-yellow'])
   })
 
   it('sin escala no hay niveles', () => {

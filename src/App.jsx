@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { DEFAULT_PROGRESSION_RULES } from './core/progressionConfig.js'
 import { getAll, getSetting, openDb } from './storage/db.js'
-import { seedIfNeeded, seedLibraryIfNeeded } from './storage/seed.js'
+import { DEFAULT_GOALS } from './core/defaultData.js'
+import { seedIfNeeded, seedLibraryIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded } from './storage/seed.js'
 import { applyTheme } from './theme.js'
 import { CalendarIcon, DumbbellIcon, HistoryIcon, HomeIcon, SlidersIcon } from './ui/icons.jsx'
 import Exercises from './screens/Exercises.jsx'
 import Placeholder from './screens/Placeholder.jsx'
 import Settings from './screens/Settings.jsx'
 import Today from './screens/Today.jsx'
+import Week from './screens/Week.jsx'
 
 const TABS = [
   { id: 'today', label: 'Hoy', Icon: HomeIcon },
@@ -28,16 +30,23 @@ async function requestPersistence() {
 }
 
 async function loadAppData(db) {
-  await seedLibraryIfNeeded(db) // también tras restaurar una copia antigua que no traía ejercicios
-  const [plan, theme, exercises, scales, rules] = await Promise.all([
+  // También tras restaurar una copia antigua que no traía ejercicios, niveles o sesiones. El orden importa:
+  // las sesiones de partida necesitan que los ejercicios ya estén cargados.
+  await seedLibraryIfNeeded(db)
+  await seedScaleLevelsIfNeeded(db)
+  await seedTemplatesIfNeeded(db)
+  const [plan, theme, exercises, scales, rules, templates, sessions, goals] = await Promise.all([
     getAll(db, 'plan'),
     getSetting(db, 'theme', 'dark'),
     getAll(db, 'exercises'),
     getAll(db, 'scales'),
     getSetting(db, 'progressionRules', DEFAULT_PROGRESSION_RULES),
+    getAll(db, 'templates'),
+    getAll(db, 'sessions'),
+    getSetting(db, 'goals', DEFAULT_GOALS),
   ])
   applyTheme(theme)
-  return { plan, theme, exercises, scales, rules }
+  return { plan, theme, exercises, scales, rules, templates, sessions, goals }
 }
 
 export default function App() {
@@ -86,8 +95,20 @@ export default function App() {
   return (
     <div className="app">
       <main className="screen">
-        {tab === 'today' && <Today plan={state.plan} />}
-        {tab === 'week' && <Placeholder title="Semana" entrega="1c" text="Aquí verás y editarás tu plan semanal." />}
+        {tab === 'today' && (
+          <Today plan={state.plan} templates={state.templates} exercises={state.exercises} sessions={state.sessions} rules={state.rules} />
+        )}
+        {tab === 'week' && (
+          <Week
+            db={state.db}
+            plan={state.plan}
+            templates={state.templates}
+            exercises={state.exercises}
+            rules={state.rules}
+            goals={state.goals}
+            onChanged={reload}
+          />
+        )}
         {tab === 'history' && <Placeholder title="Historial" entrega="1e" text="Aquí verás los entrenos que ya hiciste." />}
         {tab === 'exercises' && (
           <Exercises db={state.db} exercises={state.exercises} scales={state.scales} rules={state.rules} onChanged={reload} />

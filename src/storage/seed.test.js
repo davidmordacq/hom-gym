@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SCALES } from '../core/defaultData.js'
 import { DEFAULT_EXERCISES, ORIGINAL_LIBRARY_IDS } from '../core/exerciseLibrary.js'
 import { get, getAll, getSetting, openDb, put, putMany, remove, replaceAll } from './db.js'
-import { seedIfNeeded, seedLibraryIfNeeded } from './seed.js'
+import { seedIfNeeded, seedLibraryIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded } from './seed.js'
 
 let db
 let counter = 0
@@ -124,6 +124,100 @@ describe('seedLibraryIfNeeded', () => {
   it('puede ejecutarse dos veces a la vez sin duplicar nada', async () => {
     await Promise.all([seedLibraryIfNeeded(db), seedLibraryIfNeeded(db)])
     expect(await getAll(db, 'exercises')).toHaveLength(DEFAULT_EXERCISES.length)
+  })
+})
+
+/** Escala de bandas tal como la tenía un móvil de la 1b: solo azul y verde. */
+const OLD_BANDS = { id: 'bands', name: 'Bandas elásticas', levels: [
+  { id: 'band-blue', label: 'Banda azul (más suave)' },
+  { id: 'band-green', label: 'Banda verde (media)' },
+] }
+const levelIds = async () => (await get(db, 'scales', 'bands')).levels.map((l) => l.id)
+
+describe('seedScaleLevelsIfNeeded (banda amarilla)', () => {
+  it('la banda amarilla es la más dura: va después de la azul y la verde', () => {
+    expect(DEFAULT_SCALES.find((s) => s.id === 'bands').levels.map((l) => l.id)).toEqual(['band-blue', 'band-green', 'band-yellow'])
+  })
+
+  it('en un móvil que ya tenía azul y verde, la añade al final', async () => {
+    await put(db, 'scales', OLD_BANDS)
+    expect(await seedScaleLevelsIfNeeded(db)).toBe(true)
+    expect(await levelIds()).toEqual(['band-blue', 'band-green', 'band-yellow'])
+  })
+
+  it('solo la ofrece una vez: si la quitas, no vuelve', async () => {
+    await put(db, 'scales', OLD_BANDS)
+    await seedScaleLevelsIfNeeded(db)
+    await put(db, 'scales', OLD_BANDS)
+    expect(await seedScaleLevelsIfNeeded(db)).toBe(false)
+    expect(await levelIds()).toEqual(['band-blue', 'band-green'])
+  })
+
+  it('en una instalación nueva no la duplica', async () => {
+    await seedIfNeeded(db)
+    await seedScaleLevelsIfNeeded(db)
+    expect(await levelIds()).toEqual(['band-blue', 'band-green', 'band-yellow'])
+  })
+
+  it('respeta tus propias bandas: si ya tienes un nivel con ese id no lo toca; si no existe la escala, no la crea', async () => {
+    await put(db, 'scales', { id: 'bands', name: 'Mis bandas', levels: [{ id: 'band-yellow', label: 'Mi amarilla' }, { id: 'band-red', label: 'Roja' }] })
+    await seedScaleLevelsIfNeeded(db)
+    expect((await get(db, 'scales', 'bands')).levels.map((l) => l.label)).toEqual(['Mi amarilla', 'Roja'])
+    await remove(db, 'scales', 'bands')
+    await remove(db, 'settings', 'offeredScaleLevelIds')
+    expect(await seedScaleLevelsIfNeeded(db)).toBe(false)
+    expect(await get(db, 'scales', 'bands')).toBeUndefined()
+  })
+
+  it('si la banda amarilla va sin la verde, se pone al final', async () => {
+    await put(db, 'scales', { id: 'bands', name: 'Bandas', levels: [{ id: 'band-blue', label: 'Azul' }] })
+    await seedScaleLevelsIfNeeded(db)
+    expect(await levelIds()).toEqual(['band-blue', 'band-yellow'])
+  })
+})
+
+describe('seedTemplatesIfNeeded (sesiones de partida)', () => {
+  it('carga tren superior e inferior una vez la biblioteca está cargada', async () => {
+    await seedIfNeeded(db)
+    await seedLibraryIfNeeded(db)
+    expect(await seedTemplatesIfNeeded(db)).toBe(true)
+    const templates = await getAll(db, 'templates')
+    expect(templates.map((t) => t.id).sort()).toEqual(['tpl-lower', 'tpl-upper'])
+    expect(templates.find((t) => t.id === 'tpl-upper').items).toHaveLength(6)
+    expect(templates.find((t) => t.id === 'tpl-lower').items).toHaveLength(5)
+  })
+
+  it('solo una vez: lo que borres o cambies no vuelve a cambiar', async () => {
+    await seedLibraryIfNeeded(db)
+    await seedTemplatesIfNeeded(db)
+    await remove(db, 'templates', 'tpl-lower')
+    await put(db, 'templates', { ...(await get(db, 'templates', 'tpl-upper')), name: 'Mi superior' })
+    expect(await seedTemplatesIfNeeded(db)).toBe(false)
+    expect(await get(db, 'templates', 'tpl-lower')).toBeUndefined()
+    expect((await get(db, 'templates', 'tpl-upper')).name).toBe('Mi superior')
+  })
+
+  it('quita de las sesiones los ejercicios que no existen en este móvil (y su core)', async () => {
+    await seedLibraryIfNeeded(db)
+    await remove(db, 'exercises', 'push-up')
+    await remove(db, 'exercises', 'dead-bug')
+    await seedTemplatesIfNeeded(db)
+    const upper = await get(db, 'templates', 'tpl-upper')
+    expect(upper.items.map((i) => i.exerciseId)).not.toContain('push-up')
+    expect(upper.items.every((i) => i.coreExerciseId !== 'dead-bug')).toBe(true)
+    expect(upper.items.find((i) => i.exerciseId === 'assisted-pull-up').coreExerciseId).toBeNull()
+  })
+
+  it('sin ejercicios no crea sesiones vacías', async () => {
+    expect(await seedTemplatesIfNeeded(db)).toBe(false)
+    expect(await getAll(db, 'templates')).toHaveLength(0)
+  })
+
+  it('no pisa una sesión tuya con el mismo id', async () => {
+    await seedLibraryIfNeeded(db)
+    await put(db, 'templates', { id: 'tpl-upper', name: 'Mía', order: 1, items: [] })
+    await seedTemplatesIfNeeded(db)
+    expect((await get(db, 'templates', 'tpl-upper')).name).toBe('Mía')
   })
 })
 

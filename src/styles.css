@@ -387,6 +387,166 @@ p {
   margin: 10px 0 0;
 }
 
+/* Semana y sesiones de fuerza */
+.item-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.item-number {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+
+.item-name {
+  font-weight: 600;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.item-row .field-label {
+  margin: 0;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.step-btn {
+  width: 52px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+
+.step-value {
+  min-width: 44px;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.check input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  accent-color: var(--accent);
+}
+
+.item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.item-actions .btn {
+  flex: 1 1 90px;
+  min-height: 48px;
+  padding: 0 10px;
+}
+
+.slot-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.slot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.slot-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.slot-name {
+  font-weight: 600;
+}
+
+.slot-edit {
+  flex: none;
+  min-height: 48px;
+}
+
+.add-slot {
+  width: 100%;
+  flex: none;
+}
+
+.today-badge {
+  margin: 0 0 0 10px;
+  background: var(--accent);
+  color: var(--accent-text);
+  vertical-align: middle;
+}
+
+.freq-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+
+.freq-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.freq-low {
+  color: var(--danger);
+}
+
+.today-list {
+  margin: 8px 0 0;
+  padding-left: 24px;
+}
+
+.today-list li {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 0;
+}
+
 a {
   color: var(--accent);
 }

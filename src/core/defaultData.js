@@ -10,6 +10,7 @@ export const DEFAULT_SCALES = [
     levels: [
       { id: 'band-blue', label: 'Banda azul (más suave)' },
       { id: 'band-green', label: 'Banda verde (media)' },
+      { id: 'band-yellow', label: 'Banda amarilla (muy dura)' },
     ],
   },
   {
@@ -30,6 +31,19 @@ export const DEFAULT_SCALES = [
       { id: 'ankle-0', label: 'Sin tobilleras' },
       { id: 'ankle-2', label: 'Tobilleras de 2 kg' },
     ],
+  },
+]
+
+/**
+ * Niveles que se añadieron a una escala DESPUÉS de la primera versión. Cada dispositivo los recibe una sola vez
+ * (ver seedScaleLevelsIfNeeded), para que los móviles que ya tenían la escala los reciban sin pisar nada.
+ */
+export const SCALE_LEVEL_ADDITIONS = [
+  {
+    id: 'band-yellow',
+    scaleId: 'bands',
+    afterLevelId: 'band-green',
+    level: { id: 'band-yellow', label: 'Banda amarilla (muy dura)' },
   },
 ]
 
@@ -57,6 +71,39 @@ export const DEFAULT_WEEK_PLAN = [
   { id: 'fri-strength', weekday: 5, type: SESSION_TYPES.STRENGTH, name: 'Fuerza', flexible: true },
   { id: 'sat-outdoor', weekday: 6, type: SESSION_TYPES.BIKE_OUTDOOR, name: 'Bici outdoor', flexible: true },
   { id: 'sun-outdoor', weekday: 7, type: SESSION_TYPES.BIKE_OUTDOOR, name: 'Bici outdoor', flexible: true },
+]
+
+/**
+ * Sesiones de fuerza de partida (editables desde la app). Se usan en este orden para la rotación:
+ * la app propone la siguiente a la última que hiciste.
+ * Cada ejercicio lleva: series, si se hace por separado con cada lado (pierna o brazo) y el core opcional del descanso.
+ */
+export const DEFAULT_TEMPLATES = [
+  {
+    id: 'tpl-upper',
+    name: 'Tren superior',
+    order: 1,
+    items: [
+      { exerciseId: 'assisted-pull-up', sets: 3, perSide: false, coreExerciseId: 'dead-bug' },
+      { exerciseId: 'push-up', sets: 3, perSide: false, coreExerciseId: 'reverse-crunch' },
+      { exerciseId: 'assisted-chin-up', sets: 3, perSide: false, coreExerciseId: 'bird-dog' },
+      { exerciseId: 'close-push-up', sets: 3, perSide: false, coreExerciseId: 'leg-raise' },
+      { exerciseId: 'banded-lateral-raise', sets: 3, perSide: false, coreExerciseId: 'crunch' },
+      { exerciseId: 'banded-front-raise', sets: 3, perSide: false, coreExerciseId: null },
+    ],
+  },
+  {
+    id: 'tpl-lower',
+    name: 'Tren inferior',
+    order: 2,
+    items: [
+      { exerciseId: 'bulgarian-split-squat', sets: 3, perSide: true, coreExerciseId: 'plank' },
+      { exerciseId: 'single-leg-rdl', sets: 3, perSide: true, coreExerciseId: 'side-plank' },
+      { exerciseId: 'single-leg-bridge', sets: 3, perSide: true, coreExerciseId: 'dead-bug' },
+      { exerciseId: 'calf-raise', sets: 3, perSide: true, coreExerciseId: null },
+      { exerciseId: 'goblet-squat', sets: 3, perSide: false, coreExerciseId: 'bird-dog' },
+    ],
+  },
 ]
 
 /** Objetivos de partida (editables). La propuesta automática de plan (Fase 2) partirá de aquí. */
