@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { DEFAULT_PROGRESSION_RULES } from './core/progressionConfig.js'
 import { getAll, getSetting, openDb } from './storage/db.js'
 import { seedIfNeeded, seedLibraryIfNeeded } from './storage/seed.js'
 import { applyTheme } from './theme.js'
@@ -28,14 +29,15 @@ async function requestPersistence() {
 
 async function loadAppData(db) {
   await seedLibraryIfNeeded(db) // también tras restaurar una copia antigua que no traía ejercicios
-  const [plan, theme, exercises, scales] = await Promise.all([
+  const [plan, theme, exercises, scales, rules] = await Promise.all([
     getAll(db, 'plan'),
     getSetting(db, 'theme', 'dark'),
     getAll(db, 'exercises'),
     getAll(db, 'scales'),
+    getSetting(db, 'progressionRules', DEFAULT_PROGRESSION_RULES),
   ])
   applyTheme(theme)
-  return { plan, theme, exercises, scales }
+  return { plan, theme, exercises, scales, rules }
 }
 
 export default function App() {
@@ -88,7 +90,7 @@ export default function App() {
         {tab === 'week' && <Placeholder title="Semana" entrega="1c" text="Aquí verás y editarás tu plan semanal." />}
         {tab === 'history' && <Placeholder title="Historial" entrega="1e" text="Aquí verás los entrenos que ya hiciste." />}
         {tab === 'exercises' && (
-          <Exercises db={state.db} exercises={state.exercises} scales={state.scales} onChanged={reload} />
+          <Exercises db={state.db} exercises={state.exercises} scales={state.scales} rules={state.rules} onChanged={reload} />
         )}
         {tab === 'settings' && <Settings db={state.db} theme={state.theme} persisted={state.persisted} onChanged={reload} />}
       </main>

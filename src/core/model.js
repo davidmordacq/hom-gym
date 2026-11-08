@@ -14,6 +14,17 @@ export const RESISTANCE_TYPES = Object.freeze({
   RESISTED: 'resisted',
 })
 
+/**
+ * En qué se mide un ejercicio. Solo cambia las palabras que ve David (y el rango objetivo del ejercicio):
+ * la lógica de progresión es la misma, porque trabaja con números.
+ *  - reps: repeticiones (lo normal)
+ *  - seconds: segundos que se aguanta (plancha). El rango objetivo va en `rules.repRange` del ejercicio.
+ */
+export const EXERCISE_UNITS = Object.freeze({
+  REPS: 'reps',
+  SECONDS: 'seconds',
+})
+
 /** Tipos de sesión que caben en un día. Un día puede tener varias. */
 export const SESSION_TYPES = Object.freeze({
   STRENGTH: 'strength',
@@ -69,6 +80,7 @@ export const PROGRESSION_ACTIONS = Object.freeze({
  * @property {string[]} muscleGroups
  * @property {'assisted'|'resisted'} resistanceType
  * @property {string|null} scaleId   escala de resistencia que usa (null = sin niveles)
+ * @property {'reps'|'seconds'} [unit]  en qué se mide (por defecto, repeticiones)
  * @property {string|null} videoUrl
  * @property {string} [videoChannel]  quién publica el vídeo (solo para mostrarlo)
  * @property {string} [notes]         consejos de técnica y material

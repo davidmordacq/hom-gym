@@ -2,7 +2,7 @@
 // Es lógica pura (sin pantalla ni base de datos) para poder probarla a fondo.
 // Los números (rango, series, sesiones) NO están aquí: viven en progressionConfig.js.
 
-import { PROGRESSION_ACTIONS as A } from './model.js'
+import { EXERCISE_UNITS, PROGRESSION_ACTIONS as A } from './model.js'
 import { getRulesForExercise } from './progressionConfig.js'
 import { NO_ASSISTANCE, difficultyRank, findLevel, getEasierLevel, getHarderLevel } from './resistance.js'
 
@@ -80,6 +80,12 @@ export function evaluateExercise({ exercise, scale, sessions, rules }) {
   const labelOf = (levelId) => findLevel(exercise, scale, levelId)?.label ?? 'este nivel'
   const rangeText = `${repRange.min}-${repRange.max}`
 
+  // Solo cambian las palabras: en un ejercicio medido en segundos (plancha) se habla de segundos, no de repeticiones.
+  const seconds = exercise.unit === EXERCISE_UNITS.SECONDS
+  const unitWord = seconds ? 'segundos' : 'repeticiones'
+  const dropsText = seconds ? 'bajará el tiempo' : 'bajarán las repeticiones'
+  const yourText = seconds ? 'Tu tiempo lleva' : 'Tus repeticiones llevan'
+
   const summaries = [...sessions]
     .sort(byDate)
     .map((session) => summarizeSession(session, exercise, scale, r))
@@ -100,7 +106,7 @@ export function evaluateExercise({ exercise, scale, sessions, rules }) {
   if (summaries.length === 0) {
     return result(
       A.START,
-      `Sin historial todavía. Empieza con un nivel que te permita hacer ${rangeText} repeticiones en ${targetSets} series.`,
+      `Sin historial todavía. Empieza con un nivel que te permita hacer ${rangeText} ${unitWord} en ${targetSets} series.`,
     )
   }
 
@@ -135,8 +141,8 @@ export function evaluateExercise({ exercise, scale, sessions, rules }) {
           : ''
       return result(
         A.INCREASE_LOAD,
-        `Has llegado a ${repRange.max} repeticiones en las ${targetSets} series con ${currentLabel}. ` +
-          `Sube a: ${harder.label}${how}. Al principio bajarán las repeticiones: vuelve a llegar al rango ${rangeText}.`,
+        `Has llegado a ${repRange.max} ${unitWord} en las ${targetSets} series con ${currentLabel}. ` +
+          `Sube a: ${harder.label}${how}. Al principio ${dropsText}: vuelve a llegar al rango ${rangeText}.`,
         { ...info, nextLevelId: harder.id },
       )
     }
@@ -145,7 +151,7 @@ export function evaluateExercise({ exercise, scale, sessions, rules }) {
       scale
         ? `Has llegado al tope con ${currentLabel}, que es el nivel más difícil que tienes. ` +
             'Añade más resistencia a tu lista o prueba una variante más difícil del ejercicio.'
-        : 'Has llegado al tope de repeticiones. Este ejercicio no tiene niveles de resistencia: ' +
+        : `Has llegado al tope de ${unitWord}. Este ejercicio no tiene niveles de resistencia: ` +
             'prueba una variante más difícil o añade resistencia.',
       info,
     )
@@ -176,11 +182,11 @@ export function evaluateExercise({ exercise, scale, sessions, rules }) {
   const regressing = n >= R + 1 && totals.slice(-(R + 1)).every((t, i, arr) => i === 0 || t < arr[i - 1])
   if (regressing) {
     if (belowRange) {
-      return reduceOrRest(`Tus repeticiones llevan ${R} sesiones bajando y ya estás por debajo de ${repRange.min}.`)
+      return reduceOrRest(`${yourText} ${R} sesiones bajando y ya estás por debajo de ${repRange.min}.`)
     }
     return result(
       A.REST,
-      `Tus repeticiones llevan ${R} sesiones bajando. Descansa unos días o haz una semana más ligera y vuelve con ${currentLabel}.`,
+      `${yourText} ${R} sesiones bajando. Descansa unos días o haz una semana más ligera y vuelve con ${currentLabel}.`,
       info,
     )
   }
@@ -189,7 +195,7 @@ export function evaluateExercise({ exercise, scale, sessions, rules }) {
   const stagnant = n >= S + 1 && Math.max(...totals.slice(-S)) <= Math.max(...totals.slice(0, n - S))
   if (stagnant) {
     if (belowRange) {
-      return reduceOrRest(`Llevas ${S} sesiones sin mejorar y por debajo de ${repRange.min} repeticiones.`)
+      return reduceOrRest(`Llevas ${S} sesiones sin mejorar y por debajo de ${repRange.min} ${unitWord}.`)
     }
     return result(
       A.KEEP,
@@ -201,7 +207,7 @@ export function evaluateExercise({ exercise, scale, sessions, rules }) {
   // 3) Progreso normal: seguir intentando llegar al tope.
   return result(
     A.ADD_REPS,
-    `Sigue con ${currentLabel}: objetivo ${repRange.max} repeticiones en las ${targetSets} series ` +
+    `Sigue con ${currentLabel}: objetivo ${repRange.max} ${unitWord} en las ${targetSets} series ` +
       `(última sesión: ${last.reps.join(', ')}).`,
     info,
   )

@@ -1,13 +1,14 @@
 // Reglas para crear y editar ejercicios (validación y orden de los niveles). Solo lógica, sin pantallas.
 
 import { MUSCLE_GROUPS } from './defaultData.js'
-import { RESISTANCE_TYPES } from './model.js'
+import { EXERCISE_UNITS, RESISTANCE_TYPES } from './model.js'
+import { getRulesForExercise } from './progressionConfig.js'
 import { NO_ASSISTANCE, difficultyRank } from './resistance.js'
 import { parseYoutubeId, youtubeWatchUrl } from './youtube.js'
 
 /** Ejercicio vacío para el formulario de "Añadir". */
 export function blankExercise() {
-  return {
+  return toDraft({
     id: '',
     name: '',
     muscleGroups: [],
@@ -16,14 +17,30 @@ export function blankExercise() {
     videoUrl: '',
     videoChannel: '',
     notes: '',
+  })
+}
+
+/**
+ * Convierte un ejercicio guardado en los datos que edita el formulario.
+ * `rangeMin` y `rangeMax` son el rango objetivo propio del ejercicio (vacío = usa el de los ajustes generales).
+ */
+export function toDraft(exercise) {
+  return {
+    ...exercise,
+    unit: exercise.unit ?? EXERCISE_UNITS.REPS,
+    videoUrl: exercise.videoUrl ?? '',
+    rangeMin: exercise.rules?.repRange?.min ?? '',
+    rangeMax: exercise.rules?.repRange?.max ?? '',
   }
 }
 
 /** Identificador nuevo para un ejercicio creado por el usuario. */
 export const newExerciseId = (now = Date.now()) => `custom-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`
 
+const isBlank = (value) => value === '' || value === null || value === undefined
+
 /**
- * Revisa un ejercicio antes de guardarlo.
+ * Revisa un ejercicio (o lo que escribe el formulario) antes de guardarlo.
  * Devuelve { errors: [textos en español], exercise: versión limpia lista para guardar }.
  * Si hay errores, `exercise` es null.
  */
@@ -41,12 +58,33 @@ export function validateExercise(input, { scales = [], groups = MUSCLE_GROUPS } 
     errors.push('Elige el tipo de ejercicio.')
   }
 
+  const unit = input.unit ?? EXERCISE_UNITS.REPS
+  if (!Object.values(EXERCISE_UNITS).includes(unit)) errors.push('Elige si el ejercicio se mide en repeticiones o en segundos.')
+
   const scaleId = input.scaleId || null
   if (scaleId && !scales.some((scale) => scale.id === scaleId)) {
     errors.push('La escala de resistencia elegida ya no existe.')
   }
   if (input.resistanceType === RESISTANCE_TYPES.ASSISTED && !scaleId) {
     errors.push('Un ejercicio con ayuda necesita una escala (por ejemplo, bandas).')
+  }
+
+  // Rango objetivo propio: opcional en repeticiones (si no, vale el de los ajustes), obligatorio en segundos.
+  let repRange = null
+  const noMin = isBlank(input.rangeMin)
+  const noMax = isBlank(input.rangeMax)
+  if (noMin !== noMax) {
+    errors.push('Rellena los dos números del rango objetivo (mínimo y máximo) o deja los dos vacíos.')
+  } else if (!noMin) {
+    const min = Number(input.rangeMin)
+    const max = Number(input.rangeMax)
+    if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || min > max) {
+      errors.push('El rango objetivo debe ser de números enteros desde 1, con el mínimo no mayor que el máximo.')
+    } else {
+      repRange = { min, max }
+    }
+  } else if (unit === EXERCISE_UNITS.SECONDS) {
+    errors.push('Un ejercicio en segundos necesita su rango objetivo (por ejemplo, de 30 a 45 segundos).')
   }
 
   let videoUrl = null
@@ -59,15 +97,21 @@ export function validateExercise(input, { scales = [], groups = MUSCLE_GROUPS } 
 
   if (errors.length > 0) return { errors, exercise: null }
 
+  const { rangeMin, rangeMax, rules: ownRules, ...rest } = input // eslint-disable-line no-unused-vars
+  const { repRange: oldRange, ...otherRules } = ownRules ?? {} // eslint-disable-line no-unused-vars
+  const rules = repRange ? { ...otherRules, repRange } : otherRules
+
   const exercise = {
-    ...input,
+    ...rest,
     name,
     muscleGroups,
+    unit,
     scaleId,
     videoUrl,
     videoChannel: videoUrl ? String(input.videoChannel ?? '').trim() : '',
     notes: String(input.notes ?? '').trim(),
   }
+  if (Object.keys(rules).length > 0) exercise.rules = rules
   return { errors, exercise }
 }
 
@@ -80,6 +124,13 @@ export function levelsEasyToHard(exercise, scale) {
   const levels = [...scale.levels]
   if (exercise.resistanceType === RESISTANCE_TYPES.ASSISTED) levels.push(NO_ASSISTANCE)
   return levels.sort((a, b) => difficultyRank(exercise, scale, a.id) - difficultyRank(exercise, scale, b.id))
+}
+
+/** Texto del objetivo de un ejercicio, por ejemplo "3 series de 8-10 repeticiones". */
+export function targetText(exercise, globalRules) {
+  const { repRange, targetSets } = getRulesForExercise(exercise, globalRules)
+  const unitWord = exercise.unit === EXERCISE_UNITS.SECONDS ? 'segundos' : 'repeticiones'
+  return `${targetSets} series de ${repRange.min}-${repRange.max} ${unitWord}`
 }
 
 /** Ordena los ejercicios por grupo muscular principal (el primero de su lista) y luego por nombre. */

@@ -6,11 +6,26 @@
 // Los vídeos son de personas reales y se comprobó (2026-11-08) que existen y se pueden incrustar.
 // Se prefiere español; solo se comprobó el título y el canal, no se vio cada vídeo entero.
 
-import { RESISTANCE_TYPES } from './model.js'
+import { EXERCISE_UNITS, RESISTANCE_TYPES } from './model.js'
 
 const A = RESISTANCE_TYPES.ASSISTED
 const R = RESISTANCE_TYPES.RESISTED
+const SECONDS = EXERCISE_UNITS.SECONDS
 const watch = (id) => `https://www.youtube.com/watch?v=${id}`
+
+/**
+ * Los 30 ejercicios de la primera versión de la biblioteca (entrega 1b). Sirve para saber cuáles ya se
+ * ofrecieron en un móvil que se instaló antes de que existiera el registro de ejercicios ofrecidos.
+ * No se cambia nunca: los ejercicios que se añadan después simplemente no van en esta lista.
+ */
+export const ORIGINAL_LIBRARY_IDS = Object.freeze([
+  'goblet-squat', 'romanian-deadlift', 'reverse-lunge', 'glute-bridge', 'single-leg-bridge', 'calf-raise',
+  'banded-good-morning', 'banded-side-walk', 'hamstring-slider-curl', 'side-lying-hip-abduction',
+  'quadruped-glute-kick', 'assisted-pull-up', 'banded-row', 'bent-over-row', 'face-pull', 'superman',
+  'banded-biceps-curl', 'push-up', 'banded-chest-press', 'banded-shoulder-press', 'banded-lateral-raise',
+  'pike-push-up', 'banded-triceps-extension', 'leg-raise', 'dead-bug', 'bird-dog', 'banded-wood-chop',
+  'pallof-press', 'crunch', 'reverse-crunch',
+])
 
 /** @type {import('./model.js').Exercise[]} */
 export const DEFAULT_EXERCISES = [
@@ -129,6 +144,29 @@ export const DEFAULT_EXERCISES = [
     notes: 'A cuatro apoyos, lleva una pierna hacia atrás y arriba sin arquear la espalda. Una serie son las repeticiones de cada pierna.',
   },
 
+  {
+    id: 'single-leg-rdl',
+    name: 'Peso muerto rumano a una pierna',
+    muscleGroups: ['hamstrings', 'glutes'],
+    resistanceType: R,
+    scaleId: 'kg',
+    videoUrl: watch('EERrhuuOtnE'),
+    videoChannel: 'DrVíctorLópez',
+    notes:
+      'El vídeo usa una mancuerna: tú usa el saco de arena o la mochila. Apoyado en una pierna, inclina el tronco llevando la otra pierna hacia atrás, con la espalda recta. Una serie son las repeticiones de cada pierna.',
+  },
+  {
+    id: 'bulgarian-split-squat',
+    name: 'Sentadilla búlgara',
+    muscleGroups: ['quads', 'glutes'],
+    resistanceType: R,
+    scaleId: 'kg',
+    videoUrl: watch('giVdHLHtsIw'),
+    videoChannel: 'Squat University Español',
+    notes:
+      'Pie de atrás apoyado en algo estable y alto (silla firme, sofá o escalón) y pie de delante lo bastante adelantado. Baja con el tronco recto. Con lastre, el saco contra el pecho o la mochila. Una serie son las repeticiones de cada pierna.',
+  },
+
   // ---- Espalda y bíceps ----
   {
     id: 'assisted-pull-up',
@@ -140,6 +178,17 @@ export const DEFAULT_EXERCISES = [
     videoChannel: 'Lakbarz Calistenia',
     notes:
       'Pasa la banda por la barra y apoya la rodilla o el pie en ella. Banda más suave = más difícil; después de la más suave, dominada sin banda.',
+  },
+  {
+    id: 'assisted-chin-up',
+    name: 'Dominadas supinas con banda (palmas hacia ti)',
+    muscleGroups: ['back', 'biceps'],
+    resistanceType: A,
+    scaleId: 'bands',
+    videoUrl: watch('RNvjNCC0j4g'),
+    videoChannel: 'CLARA FLORINDO | ASESORÍAS ONLINE',
+    notes:
+      'Agarre con las palmas hacia ti y las manos a la anchura de los hombros. Suele trabajar algo más el bíceps que el agarre con las palmas hacia delante. Banda más suave = más difícil; después de la más suave, sin banda.',
   },
   {
     id: 'banded-row',
@@ -204,6 +253,17 @@ export const DEFAULT_EXERCISES = [
     notes: 'Cuerpo en línea recta de la cabeza a los talones. Con la mochila puesta sube la dificultad.',
   },
   {
+    id: 'close-push-up',
+    name: 'Flexiones con manos juntas (diamante)',
+    muscleGroups: ['triceps', 'chest', 'shoulders'],
+    resistanceType: R,
+    scaleId: 'kg',
+    videoUrl: watch('NO3fnbQr5nk'),
+    videoChannel: 'EresFitness',
+    notes:
+      'Manos juntas bajo el pecho. En los estudios con electrodos activan pecho y tríceps algo más que las manos abiertas. Si es demasiado duro, apoya las rodillas.',
+  },
+  {
     id: 'banded-chest-press',
     name: 'Press de pecho con banda',
     muscleGroups: ['chest', 'triceps'],
@@ -232,6 +292,16 @@ export const DEFAULT_EXERCISES = [
     videoUrl: watch('yfNg5sFndbw'),
     videoChannel: "Men's Health",
     notes: 'Pisa la banda y sube los brazos hacia los lados hasta la altura de los hombros, con control.',
+  },
+  {
+    id: 'banded-front-raise',
+    name: 'Elevaciones frontales con banda',
+    muscleGroups: ['shoulders'],
+    resistanceType: R,
+    scaleId: 'bands',
+    videoUrl: watch('733F5Ld-GYM'),
+    videoChannel: 'Narekfitness',
+    notes: 'Pisa la banda y sube los brazos estirados hacia delante hasta la altura de los hombros, sin balancear el cuerpo.',
   },
   {
     id: 'pike-push-up',
@@ -264,6 +334,31 @@ export const DEFAULT_EXERCISES = [
     videoUrl: watch('oxJj5FoBycQ'),
     videoChannel: 'P4P Español',
     notes: 'Lumbar pegada al suelo todo el rato. Con las tobilleras de 2 kg sube la dificultad.',
+  },
+  {
+    id: 'plank',
+    name: 'Plancha',
+    muscleGroups: ['core'],
+    resistanceType: R,
+    scaleId: 'kg',
+    unit: SECONDS,
+    rules: { repRange: { min: 30, max: 45 } },
+    videoUrl: watch('zfY5XXa26ug'),
+    videoChannel: 'Marcos Sacristán | Fisioterapia a tu alcance',
+    notes:
+      'Se mide en segundos. Antebrazos y puntas de los pies apoyados, cuerpo en línea recta sin dejar caer la cadera. Con la mochila puesta sube la dificultad.',
+  },
+  {
+    id: 'side-plank',
+    name: 'Plancha lateral',
+    muscleGroups: ['core'],
+    resistanceType: R,
+    scaleId: null,
+    unit: SECONDS,
+    rules: { repRange: { min: 30, max: 45 } },
+    videoUrl: watch('45t3tTcRcKE'),
+    videoChannel: 'APTA Vital Sport',
+    notes: 'Se mide en segundos. Apoyado en un antebrazo y el lateral del pie, cuerpo recto. Una serie son los segundos de cada lado.',
   },
   {
     id: 'dead-bug',

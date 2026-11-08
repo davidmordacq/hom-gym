@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_SCALES, MUSCLE_GROUPS } from './defaultData.js'
-import { DEFAULT_EXERCISES } from './exerciseLibrary.js'
+import { DEFAULT_EXERCISES, ORIGINAL_LIBRARY_IDS } from './exerciseLibrary.js'
 import { levelsEasyToHard } from './exercises.js'
 import { RESISTANCE_TYPES } from './model.js'
 import { getRulesForExercise } from './progressionConfig.js'
@@ -39,10 +39,26 @@ describe('biblioteca inicial de ejercicios', () => {
     expect(new Set(videos).size).toBe(videos.length)
   })
 
-  it('las dominadas son el único ejercicio asistido y usan bandas', () => {
+  it('los únicos ejercicios asistidos son las dos dominadas y usan bandas', () => {
     const assisted = DEFAULT_EXERCISES.filter((e) => e.resistanceType === RESISTANCE_TYPES.ASSISTED)
-    expect(assisted.map((e) => e.id)).toEqual(['assisted-pull-up'])
-    expect(assisted[0].scaleId).toBe('bands')
+    expect(assisted.map((e) => e.id).sort()).toEqual(['assisted-chin-up', 'assisted-pull-up'])
+    for (const exercise of assisted) expect(exercise.scaleId).toBe('bands')
+  })
+
+  it('los ejercicios en segundos tienen su propio rango y los demás usan repeticiones', () => {
+    const inSeconds = DEFAULT_EXERCISES.filter((e) => e.unit === 'seconds')
+    expect(inSeconds.map((e) => e.id).sort()).toEqual(['plank', 'side-plank'])
+    for (const exercise of inSeconds) {
+      expect(exercise.rules.repRange.min).toBeGreaterThanOrEqual(20)
+      expect(getRulesForExercise(exercise).repRange).toEqual({ min: 30, max: 45 })
+    }
+    for (const exercise of DEFAULT_EXERCISES.filter((e) => e.unit !== 'seconds')) expect(exercise.rules).toBeUndefined()
+  })
+
+  it('los ejercicios originales no se han tocado: siguen todos y con el mismo id', () => {
+    const ids = DEFAULT_EXERCISES.map((e) => e.id)
+    expect(ORIGINAL_LIBRARY_IDS).toHaveLength(30)
+    for (const id of ORIGINAL_LIBRARY_IDS) expect(ids).toContain(id)
   })
 
   it('cada grupo muscular tiene al menos un ejercicio como principal', () => {

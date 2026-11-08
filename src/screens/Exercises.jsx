@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { MUSCLE_GROUPS } from '../core/defaultData.js'
-import { blankExercise, groupExercises, levelsEasyToHard, newExerciseId, searchExercises } from '../core/exercises.js'
+import {
+  blankExercise, groupExercises, levelsEasyToHard, newExerciseId, searchExercises, targetText, toDraft,
+} from '../core/exercises.js'
 import { parseYoutubeId } from '../core/youtube.js'
 import { put, remove } from '../storage/db.js'
 import { RESISTANCE_TYPE_HELP, RESISTANCE_TYPE_LABELS } from '../ui/labels.js'
@@ -9,7 +11,7 @@ import ExerciseForm from './ExerciseForm.jsx'
 
 const groupLabel = (id) => MUSCLE_GROUPS.find((g) => g.id === id)?.label ?? id
 
-export default function Exercises({ db, exercises, scales, onChanged }) {
+export default function Exercises({ db, exercises, scales, rules, onChanged }) {
   // view: { mode: 'list' } | { mode: 'detail', id } | { mode: 'form', id } (id null = nuevo)
   const [view, setView] = useState({ mode: 'list' })
   const [query, setQuery] = useState('')
@@ -40,8 +42,9 @@ export default function Exercises({ db, exercises, scales, onChanged }) {
     const editing = view.id ? exercises.find((e) => e.id === view.id) : null
     return (
       <ExerciseForm
-        initial={editing ?? blankExercise()}
+        initial={editing ? toDraft(editing) : blankExercise()}
         scales={scales}
+        rules={rules}
         isNew={!editing}
         onSave={save}
         onCancel={() => setView(editing ? { mode: 'detail', id: editing.id } : { mode: 'list' })}
@@ -98,6 +101,9 @@ export default function Exercises({ db, exercises, scales, onChanged }) {
         <section className="card">
           <h2>Dificultad</h2>
           <p>
+            <strong>Objetivo:</strong> {targetText(selected, rules)}.
+          </p>
+          <p>
             <strong>{RESISTANCE_TYPE_LABELS[selected.resistanceType]}.</strong> {RESISTANCE_TYPE_HELP[selected.resistanceType]}
           </p>
           {levels.length > 0 ? (
@@ -110,7 +116,7 @@ export default function Exercises({ db, exercises, scales, onChanged }) {
               </ol>
             </>
           ) : (
-            <p className="muted small">Sin niveles de material: se progresa subiendo repeticiones.</p>
+            <p className="muted small">Sin niveles de material: se progresa mejorando el resultado de cada serie.</p>
           )}
         </section>
 

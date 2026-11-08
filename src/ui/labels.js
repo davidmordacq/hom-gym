@@ -12,6 +12,11 @@ export const RESISTANCE_TYPE_LABELS = {
   assisted: 'Con ayuda',
 }
 
+export const UNIT_LABELS = {
+  reps: 'Repeticiones',
+  seconds: 'Segundos',
+}
+
 export const RESISTANCE_TYPE_HELP = {
   resisted: 'Más difícil = más carga: una banda más dura o más kg.',
   assisted: 'Más difícil = menos ayuda: una banda más suave y, al final, sin banda (por ejemplo, las dominadas con banda).',

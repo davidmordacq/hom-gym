@@ -336,6 +336,17 @@ p {
   font-weight: 600;
 }
 
+.range {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.range input {
+  flex: 1;
+  min-width: 0;
+}
+
 .levels {
   margin: 0;
   padding-left: 22px;

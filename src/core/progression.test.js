@@ -302,3 +302,68 @@ describe('summarizeSession y groupSetsBySession', () => {
     expect(grouped[1].sessionId).toBe('b')
   })
 })
+
+describe('ejercicios medidos en segundos (plancha)', () => {
+  // La plancha usa el mismo motor: solo cambian las palabras y el rango (30-45 s) viene del propio ejercicio.
+  const plank = {
+    id: 'plancha',
+    name: 'Plancha',
+    resistanceType: 'resisted',
+    scaleId: 'bands',
+    unit: 'seconds',
+    rules: { repRange: { min: 30, max: 45 } },
+  }
+
+  it('sin historial: habla de segundos y usa el rango del ejercicio', () => {
+    const result = evaluate(plank, [])
+    expect(result.action).toBe('start')
+    expect(result.repRange).toEqual({ min: 30, max: 45 })
+    expect(result.message).toContain('30-45 segundos')
+    expect(result.message).not.toContain('repeticiones')
+  })
+
+  it('45 s en todas las series -> sube de nivel, con la misma lógica que las repeticiones', () => {
+    const result = evaluate(plank, [session('2025-01-01', 'blue', [45, 45, 45])])
+    expect(result.action).toBe('increase_load')
+    expect(result.nextLevelId).toBe('green')
+    expect(result.message).toContain('45 segundos')
+    expect(result.message).toContain('bajará el tiempo')
+    expect(result.message).not.toContain('repeticiones')
+  })
+
+  it('una serie por debajo del tope impide subir (45, 45, 40)', () => {
+    const result = evaluate(plank, [session('2025-01-01', 'blue', [45, 45, 40])])
+    expect(result.action).toBe('add_reps')
+    expect(result.message).toContain('objetivo 45 segundos')
+    expect(result.message).toContain('45, 45, 40')
+  })
+
+  it('el tiempo baja varias sesiones seguidas -> descansar, hablando de tiempo', () => {
+    const result = evaluate(plank, run('blue', [[40, 40, 40], [38, 38, 38], [36, 36, 36], [34, 34, 34]]))
+    expect(result.action).toBe('rest')
+    expect(result.message).toContain('Tu tiempo lleva')
+    expect(result.message).not.toContain('repeticiones')
+  })
+
+  it('sin mejorar y por debajo del mínimo -> reducir, con la unidad correcta', () => {
+    const result = evaluate(plank, run('green', [[25, 25, 25], [25, 25, 25], [24, 25, 25], [25, 24, 25]]))
+    expect(result.action).toBe('decrease_load')
+    expect(result.message).toContain('por debajo de 30 segundos')
+  })
+
+  it('sin niveles, en el tope -> variante más difícil, hablando de segundos', () => {
+    const result = evaluateExercise({
+      exercise: { ...plank, scaleId: null },
+      scale: null,
+      sessions: [session('2025-01-01', null, [45, 45, 45])],
+    })
+    expect(result.action).toBe('max_level')
+    expect(result.message).toContain('tope de segundos')
+  })
+
+  it('un ejercicio sin "unit" sigue hablando de repeticiones (no cambia nada para los demás)', () => {
+    const result = evaluate(row, [session('2025-01-01', 'green', [9, 9, 9])])
+    expect(result.message).toContain('repeticiones')
+    expect(result.message).not.toContain('segundos')
+  })
+})
