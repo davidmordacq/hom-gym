@@ -30,11 +30,18 @@ Especificación original: `Especificacion_App_Entrenamiento.md` (en esta carpeta
   - `resisted` (remo con banda, sentadilla con lastre): banda más dura / más kg = más difícil.
 - Tres sesiones seguidas sin mejorar → **mantener**. Tres sesiones seguidas bajando repeticiones → **descansar**, o **reducir** un nivel si además se está por debajo del rango.
 - Subir de nivel gana siempre sobre las demás reglas. Solo cuentan las sesiones seguidas con el mismo nivel de resistencia.
-- Decisión pendiente de revisar con David: para fuerza pura, 8-10 repeticiones es un rango más de hipertrofia; es válido con bandas y peso corporal, y es configurable.
+- **Objetivo de David:** fuerza orientada a salud y longevidad y, si acaso, a su ciclismo. **No busca hipertrofia.** Entrena fuerza 2-3 veces por semana.
+- El 8-10 y las 3-4 series son **valores por defecto razonables, no un límite científico** (revisado el 2026-11-08): la evidencia dice que muchos modelos funcionan; cargas más pesadas dan algo más de fuerza máxima; para ciclistas hay estudios contradictorios. Mantener todo configurable por ejercicio. David decidió (2026-11-08) **no** usar el esfuerzo percibido como condición para subir de nivel: las reglas se quedan como están. Sigue abierta la idea de rangos más bajos (por ejemplo 5-8) en ejercicios de piernas con lastre; no se hace sin que él lo pida.
 
 ## Fases
 - **Fase 0 (hecha):** proyecto, git, este archivo, modelo de datos, motor de progresión y pruebas. Sin pantallas.
-- **Fase 1:** plan semanal editable, sesión en curso, historial simple, lista de ejercicios con vídeo, modo oscuro, exportar/importar.
+- **Fase 1:** plan semanal editable, sesión en curso, historial simple, lista de ejercicios con vídeo, modo oscuro, exportar/importar. Se construye en 5 entregas, cada una con commit y probada por David antes de seguir:
+  - **1a Base:** menú inferior (Hoy, Semana, Historial, Ejercicios, Ajustes), modo oscuro, datos locales (IndexedDB), exportar/importar, PWA instalable y publicación en GitHub Pages **desde esta entrega** para probar en el móvil.
+  - **1b Ejercicios:** lista editable con grupo muscular, tipo, escala y vídeo de YouTube incrustado; biblioteca inicial de ~30-40 ejercicios con enlaces comprobados.
+  - **1c Plan semanal:** sesiones por día, añadir/quitar/mover, plantillas de fuerza.
+  - **1d Sesión en curso:** registrar series con pocos toques; bici simple.
+  - **1e Hoy e historial:** qué toca hoy, historial, ajustes de las reglas de progresión.
+- Decisiones de la Fase 1 (2026-11-08): la sesión muestra **lo hecho la última vez + la sugerencia del motor**; vídeos **en español si existe, si no en inglés**; tres sesiones de fuerza **distintas A/B/C**, de modo que entre las tres cada grupo muscular salga al menos 2 veces por semana.
 - **Fase 2:** gráficas, sugerencias de progresión en pantalla, propuesta de plan, racha y calendario de cumplimiento.
 - **Fase 3:** recordatorios. En Android una web instalada no avisa de forma fiable con la app cerrada: habrá que elegir entre un pequeño servidor de avisos o eventos de calendario.
 - **Fase 4:** entrenador con IA (clave de API, con coste por uso).
@@ -43,7 +50,12 @@ Especificación original: `Especificacion_App_Entrenamiento.md` (en esta carpeta
 - `src/core/` — lógica pura, sin pantallas, con pruebas (`*.test.js`):
   - `model.js` nombres y tipos de datos · `progressionConfig.js` reglas ajustables · `resistance.js` niveles y dirección de dificultad
   - `progression.js` motor de recomendaciones · `backup.js` exportar/importar · `defaultData.js` datos de partida
-- `src/main.jsx` — marcador de posición hasta la Fase 1.
+- `src/storage/` — guardado local: `db.js` (IndexedDB genérico, exportar/importar atómico) y `seed.js` (datos de la primera vez). Con pruebas usando `fake-indexeddb`.
+- `src/App.jsx`, `src/screens/`, `src/ui/`, `src/theme.js`, `src/styles.css` — pantallas (menú inferior, tema oscuro/claro/auto). Móvil primero, botones grandes.
+- `vite.config.js` — configura la PWA (`vite-plugin-pwa`, actualización automática, funciona sin conexión). `base: './'` para publicar en una subcarpeta.
+- `.github/workflows/deploy.yml` — publica en GitHub Pages al subir a `main`, tras pasar las pruebas.
+- `public/icons/` — iconos de la app (generados con un script puntual; el diseño es una "H" verde sobre fondo oscuro).
+- `.claude/launch.json` — servidor de desarrollo (`hom-gym-dev`). El panel de vista previa de Claude puede seguir leyendo la configuración de la carpeta anterior; si abre otra app, lanzar `vite preview` desde el panel de Terminal.
 
 ## Comandos
 - `npm run dev` — abrir la app en local · `npm test` — ejecutar las pruebas · `npm run build` — generar la versión publicable.

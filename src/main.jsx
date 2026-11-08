@@ -1,10 +1,14 @@
+import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { registerSW } from 'virtual:pwa-register'
+import App from './App.jsx'
+import './styles.css'
 
-// Marcador de la Fase 0: todavía no hay pantallas.
-// Las pantallas reales llegan en la Fase 1.
+// Registra el "service worker": es lo que permite instalar la app y que abra sin conexión.
+registerSW({ immediate: true })
+
 createRoot(document.getElementById('root')).render(
-  <main style={{ fontFamily: 'sans-serif', padding: 24, color: '#eee', background: '#0f1115', minHeight: '100vh' }}>
-    <h1>Hom Gym</h1>
-    <p>Fase 0: cimientos y reglas de progresión. Aún sin pantallas.</p>
-  </main>,
+  <StrictMode>
+    <App />
+  </StrictMode>,
 )
