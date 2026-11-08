@@ -218,7 +218,172 @@ p {
   color: var(--accent);
 }
 
-button:focus-visible {
+/* Ejercicios */
+.search,
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+
+.search {
+  margin-bottom: 8px;
+}
+
+.field {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.field:last-child {
+  margin-bottom: 0;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.group-title {
+  margin: 20px 0 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.exercise-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.exercise-row {
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  text-align: left;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.exercise-name {
+  font-weight: 600;
+}
+
+.back {
+  min-height: 44px;
+  margin: -8px 0 4px -8px;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.badge-gap {
+  margin: 0 6px 6px 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.chip-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.levels {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.errors {
+  margin: 0 0 14px;
+  padding: 10px 12px 10px 28px;
+}
+
+.video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.video-start {
+  width: 100%;
+  min-height: 64px;
+}
+
+.video p {
+  margin: 10px 0 0;
+}
+
+a {
+  color: var(--accent);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }

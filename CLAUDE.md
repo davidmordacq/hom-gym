@@ -37,7 +37,8 @@ Especificación original: `Especificacion_App_Entrenamiento.md` (en esta carpeta
 - **Fase 0 (hecha):** proyecto, git, este archivo, modelo de datos, motor de progresión y pruebas. Sin pantallas.
 - **Fase 1:** plan semanal editable, sesión en curso, historial simple, lista de ejercicios con vídeo, modo oscuro, exportar/importar. Se construye en 5 entregas, cada una con commit y probada por David antes de seguir:
   - **1a Base:** menú inferior (Hoy, Semana, Historial, Ejercicios, Ajustes), modo oscuro, datos locales (IndexedDB), exportar/importar, PWA instalable y publicación en GitHub Pages **desde esta entrega** para probar en el móvil.
-  - **1b Ejercicios:** lista editable con grupo muscular, tipo, escala y vídeo de YouTube incrustado; biblioteca inicial de ~30-40 ejercicios con enlaces comprobados.
+  - **1a (hecha y probada en el móvil):** publicada en https://davidmordacq.github.io/hom-gym/ (repositorio público `davidmordacq/hom-gym`).
+  - **1b Ejercicios (hecha, pendiente de probar en el móvil):** lista editable con grupo muscular, tipo, escala y vídeo de YouTube incrustado; biblioteca inicial de 30 ejercicios (`src/core/exerciseLibrary.js`) con enlaces comprobados (existen y se pueden incrustar; solo se revisó título y canal). Material de David: bandas azul/verde, barra de dominadas, esterilla, tobilleras de 2 kg, saco de 10 kg y mochila de ~10 kg; **sin banco ni mancuernas**. Sin molestias ni lesiones que evitar. La movilidad no está en esta biblioteca (se decidirá en 1c). Nada basado en tiempo (plancha, isométricos), porque las series solo registran repeticiones.
   - **1c Plan semanal:** sesiones por día, añadir/quitar/mover, plantillas de fuerza.
   - **1d Sesión en curso:** registrar series con pocos toques; bici simple.
   - **1e Hoy e historial:** qué toca hoy, historial, ajustes de las reglas de progresión.
@@ -50,7 +51,8 @@ Especificación original: `Especificacion_App_Entrenamiento.md` (en esta carpeta
 - `src/core/` — lógica pura, sin pantallas, con pruebas (`*.test.js`):
   - `model.js` nombres y tipos de datos · `progressionConfig.js` reglas ajustables · `resistance.js` niveles y dirección de dificultad
   - `progression.js` motor de recomendaciones · `backup.js` exportar/importar · `defaultData.js` datos de partida
-- `src/storage/` — guardado local: `db.js` (IndexedDB genérico, exportar/importar atómico) y `seed.js` (datos de la primera vez). Con pruebas usando `fake-indexeddb`.
+  - `exerciseLibrary.js` biblioteca inicial de ejercicios · `exercises.js` validar/agrupar/buscar ejercicios y ordenar niveles · `youtube.js` enlaces de YouTube
+- `src/storage/` — guardado local: `db.js` (IndexedDB genérico, exportar/importar atómico) y `seed.js` (datos de la primera vez; `seedLibraryIfNeeded` carga la biblioteca una sola vez y nunca pisa cambios). Con pruebas usando `fake-indexeddb`.
 - `src/App.jsx`, `src/screens/`, `src/ui/`, `src/theme.js`, `src/styles.css` — pantallas (menú inferior, tema oscuro/claro/auto). Móvil primero, botones grandes.
 - `vite.config.js` — configura la PWA (`vite-plugin-pwa`, actualización automática, funciona sin conexión). `base: './'` para publicar en una subcarpeta.
 - `.github/workflows/deploy.yml` — publica en GitHub Pages al subir a `main`, tras pasar las pruebas.

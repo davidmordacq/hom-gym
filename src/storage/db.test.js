@@ -107,7 +107,7 @@ describe('datos de la primera vez', () => {
 
   it('los datos de partida incluyen escalas, reglas y objetivos', async () => {
     await seedIfNeeded(db)
-    expect((await getAll(db, 'scales')).map((s) => s.id).sort()).toEqual(['bands', 'kg'])
+    expect((await getAll(db, 'scales')).map((s) => s.id).sort()).toEqual(['ankle-weights', 'bands', 'kg'])
     expect((await getSetting(db, 'progressionRules')).repRange).toEqual({ min: 8, max: 10 })
     expect((await getSetting(db, 'goals')).strengthSessionsPerWeek).toBe(3)
   })

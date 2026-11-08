@@ -99,7 +99,7 @@ export default function Settings({ db, theme, persisted, onChanged }) {
         </p>
       </section>
 
-      <p className="muted small">Hom Gym · Fase 1, entrega 1a</p>
+      <p className="muted small">Hom Gym · Fase 1, entrega 1b</p>
     </>
   )
 }

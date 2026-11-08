@@ -23,6 +23,14 @@ export const DEFAULT_SCALES = [
       { id: 'kg-20', label: '20 kg (mochila + saco)' },
     ],
   },
+  {
+    id: 'ankle-weights',
+    name: 'Tobilleras',
+    levels: [
+      { id: 'ankle-0', label: 'Sin tobilleras' },
+      { id: 'ankle-2', label: 'Tobilleras de 2 kg' },
+    ],
+  },
 ]
 
 export const MUSCLE_GROUPS = [

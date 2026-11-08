@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getAll, getSetting, openDb } from './storage/db.js'
-import { seedIfNeeded } from './storage/seed.js'
+import { seedIfNeeded, seedLibraryIfNeeded } from './storage/seed.js'
 import { applyTheme } from './theme.js'
 import { CalendarIcon, DumbbellIcon, HistoryIcon, HomeIcon, SlidersIcon } from './ui/icons.jsx'
+import Exercises from './screens/Exercises.jsx'
 import Placeholder from './screens/Placeholder.jsx'
 import Settings from './screens/Settings.jsx'
 import Today from './screens/Today.jsx'
@@ -26,9 +27,15 @@ async function requestPersistence() {
 }
 
 async function loadAppData(db) {
-  const [plan, theme] = await Promise.all([getAll(db, 'plan'), getSetting(db, 'theme', 'dark')])
+  await seedLibraryIfNeeded(db) // también tras restaurar una copia antigua que no traía ejercicios
+  const [plan, theme, exercises, scales] = await Promise.all([
+    getAll(db, 'plan'),
+    getSetting(db, 'theme', 'dark'),
+    getAll(db, 'exercises'),
+    getAll(db, 'scales'),
+  ])
   applyTheme(theme)
-  return { plan, theme }
+  return { plan, theme, exercises, scales }
 }
 
 export default function App() {
@@ -80,7 +87,9 @@ export default function App() {
         {tab === 'today' && <Today plan={state.plan} />}
         {tab === 'week' && <Placeholder title="Semana" entrega="1c" text="Aquí verás y editarás tu plan semanal." />}
         {tab === 'history' && <Placeholder title="Historial" entrega="1e" text="Aquí verás los entrenos que ya hiciste." />}
-        {tab === 'exercises' && <Placeholder title="Ejercicios" entrega="1b" text="Aquí estará tu lista de ejercicios con vídeo." />}
+        {tab === 'exercises' && (
+          <Exercises db={state.db} exercises={state.exercises} scales={state.scales} onChanged={reload} />
+        )}
         {tab === 'settings' && <Settings db={state.db} theme={state.theme} persisted={state.persisted} onChanged={reload} />}
       </main>
       <nav className="tabbar" aria-label="Secciones">

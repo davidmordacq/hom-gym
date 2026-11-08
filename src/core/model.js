@@ -70,6 +70,8 @@ export const PROGRESSION_ACTIONS = Object.freeze({
  * @property {'assisted'|'resisted'} resistanceType
  * @property {string|null} scaleId   escala de resistencia que usa (null = sin niveles)
  * @property {string|null} videoUrl
+ * @property {string} [videoChannel]  quién publica el vídeo (solo para mostrarlo)
+ * @property {string} [notes]         consejos de técnica y material
  * @property {Partial<import('./progressionConfig.js').ProgressionRules>} [rules] ajustes propios de este ejercicio
  *
  * @typedef {Object} SetLog
