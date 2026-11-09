@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_SCALES, MUSCLE_GROUPS, MUSCLE_REGIONS, regionOfGroup } from './defaultData.js'
 import { DEFAULT_EXERCISES } from './exerciseLibrary.js'
 import { DEFAULT_PROGRESSION_RULES } from './progressionConfig.js'
-import { blankExercise, groupExercises, mainMuscleGroup, newExerciseId, searchExercises, targetText, toDraft, validateExercise } from './exercises.js'
+import {
+  blankExercise, exerciseUsage, groupExercises, isArchived, mainMuscleGroup, newExerciseId, removeExerciseFromTemplates, searchExercises, setArchived,
+  targetText, toDraft, validateExercise,
+} from './exercises.js'
 
 const scales = DEFAULT_SCALES
 const valid = () => ({
@@ -228,5 +231,67 @@ describe('región y grupo principal (análisis)', () => {
 
   it('todos los ejercicios de la biblioteca tienen grupo principal con región', () => {
     for (const exercise of DEFAULT_EXERCISES) expect(regionOfGroup(mainMuscleGroup(exercise)), exercise.id).not.toBeNull()
+  })
+})
+
+describe('proteger el borrado de ejercicios con historial', () => {
+  const set = (sessionId, exerciseId, extra = {}) => ({ sessionId, exerciseId, order: 1, reps: 8, ...extra })
+  const session = (id, entries, status = 'done') => ({ id, status, exercises: entries })
+  const template = (id, name, items) => ({ id, name, order: 1, items })
+  const item = (exerciseId, coreExerciseId = null) => ({ exerciseId, sets: 3, perSide: false, coreExerciseId })
+
+  it('un ejercicio sin uso se puede borrar', () => {
+    expect(exerciseUsage({ exerciseId: 'push-up', sets: [], sessions: [], templates: [] })).toEqual({ sets: 0, sessions: 0, templates: [], blocked: false })
+  })
+
+  it('con series registradas no se puede borrar y se cuentan series y sesiones', () => {
+    const usage = exerciseUsage({
+      exerciseId: 'push-up',
+      sets: [set('a', 'push-up'), set('a', 'push-up'), set('b', 'push-up'), set('b', 'plank')],
+      sessions: [session('a', [{ exerciseId: 'push-up' }]), session('b', [{ exerciseId: 'push-up' }, { exerciseId: 'plank' }])],
+    })
+    expect(usage).toMatchObject({ sets: 3, sessions: 2, blocked: true })
+  })
+
+  it('aunque no tenga series, si una sesión (hecha o en curso) lo llevaba, tampoco se borra', () => {
+    expect(exerciseUsage({ exerciseId: 'push-up', sessions: [session('a', [{ exerciseId: 'push-up' }], 'in_progress')] }).blocked).toBe(true)
+    expect(exerciseUsage({ exerciseId: 'push-up', sessions: [session('a', [{ exerciseId: 'plank' }])] }).blocked).toBe(false)
+  })
+
+  it('un ejercicio usado como core del descanso en el historial también está protegido', () => {
+    expect(exerciseUsage({ exerciseId: 'dead-bug', sessions: [session('a', [{ exerciseId: 'push-up', coreExerciseId: 'dead-bug' }])] }).blocked).toBe(true)
+  })
+
+  it('las sesiones de fuerza tipo que lo llevan se listan, pero eso solo no impide borrarlo', () => {
+    const usage = exerciseUsage({ exerciseId: 'push-up', templates: [template('t1', 'Superior', [item('push-up')]), template('t2', 'Inferior', [item('plank', 'push-up')]), template('t3', 'Otra', [item('plank')])] })
+    expect(usage.templates).toEqual(['Superior', 'Inferior'])
+    expect(usage.blocked).toBe(false)
+  })
+
+  it('removeExerciseFromTemplates lo quita de las sesiones tipo y de los core de los descansos, sin tocar el resto', () => {
+    const templates = [template('t1', 'Superior', [item('push-up'), item('plank', 'push-up'), item('crunch')]), template('t3', 'Otra', [item('plank')])]
+    const changed = removeExerciseFromTemplates(templates, 'push-up')
+    expect(changed).toHaveLength(1)
+    expect(changed[0].items).toEqual([item('plank', null), item('crunch')])
+    expect(templates[0].items).toHaveLength(3) // el original no cambia
+    expect(removeExerciseFromTemplates(templates, 'no-esta')).toEqual([])
+  })
+
+  it('archivar y restaurar conserva todo lo demás', () => {
+    const exercise = { id: 'x', name: 'X', muscleGroups: ['core'], resistanceType: 'resisted', scaleId: null }
+    const archived = setArchived(exercise, true)
+    expect(archived).toEqual({ ...exercise, archived: true })
+    expect(isArchived(archived)).toBe(true)
+    const restored = setArchived(archived, false)
+    expect(restored).toEqual(exercise)
+    expect('archived' in restored).toBe(false)
+    expect(isArchived(exercise)).toBe(false)
+    expect(isArchived(undefined)).toBe(false)
+  })
+
+  it('un ejercicio archivado sigue siendo válido al editarlo y conserva la marca', () => {
+    const archived = { ...validateExercise({ ...valid() }, { scales }).exercise, archived: true }
+    const edited = validateExercise({ ...toDraft(archived), name: 'Otro nombre' }, { scales }).exercise
+    expect(edited.archived).toBe(true)
   })
 })

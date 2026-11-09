@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { groupExercises, searchExercises } from '../core/exercises.js'
+import { groupExercises, isArchived, searchExercises } from '../core/exercises.js'
 import {
   MAX_SESSION_MINUTES, MAX_SETS_PER_EXERCISE, blankItem, estimateMinutes, itemTargetText, minutesText, moveItem,
   validateTemplate,
@@ -17,7 +17,7 @@ export default function TemplateEditor({ initial, templates, exercises, rules, r
 
   const byId = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises])
   const coreOptions = useMemo(
-    () => exercises.filter((e) => e.muscleGroups.includes('core')).sort((a, b) => a.name.localeCompare(b.name, 'es')),
+    () => exercises.filter((e) => e.muscleGroups.includes('core') && !isArchived(e)).sort((a, b) => a.name.localeCompare(b.name, 'es')),
     [exercises],
   )
   const minutes = estimateMinutes(draft, exercises, { rules, restSeconds })
@@ -45,7 +45,7 @@ export default function TemplateEditor({ initial, templates, exercises, rules, r
 
   if (picking) {
     const used = new Set(draft.items.map((item) => item.exerciseId))
-    const groups = groupExercises(searchExercises(exercises, query).filter((e) => !used.has(e.id)))
+    const groups = groupExercises(searchExercises(exercises, query).filter((e) => !used.has(e.id) && !isArchived(e)))
     return (
       <>
         <button type="button" className="back" onClick={() => setPicking(false)}>

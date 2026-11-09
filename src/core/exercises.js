@@ -40,6 +40,50 @@ export function toDraft(exercise) {
  */
 export const mainMuscleGroup = (exercise) => exercise?.muscleGroups?.[0] ?? null
 
+/**
+ * Dónde se usa un ejercicio: series registradas, sesiones (hechas o en curso) que lo llevan y sesiones de fuerza tipo.
+ * `blocked` es true si tiene historial o está en una sesión en curso: borrarlo haría que ese historial dejara de contar
+ * (saldría como "ejercicio que ya no existe"), así que en ese caso solo se puede archivar.
+ */
+export function exerciseUsage({ exerciseId, sets = [], sessions = [], templates = [] }) {
+  const mine = sets.filter((s) => s.exerciseId === exerciseId)
+  const uses = (entry) => entry.exerciseId === exerciseId || entry.coreExerciseId === exerciseId
+  const usedBy = sessions.filter((s) => (s.exercises ?? []).some(uses))
+  const inTemplates = templates.filter((t) => (t.items ?? []).some(uses)).map((t) => t.name)
+  const sessionIds = new Set([...mine.map((s) => s.sessionId), ...usedBy.map((s) => s.id)])
+  return {
+    sets: mine.length,
+    // Con series, las sesiones donde se hicieron; si no hay series, las sesiones que lo llevaban previsto.
+    sessions: mine.length > 0 ? new Set(mine.map((s) => s.sessionId)).size : sessionIds.size,
+    templates: inTemplates,
+    blocked: mine.length > 0 || usedBy.length > 0,
+  }
+}
+
+/**
+ * Quita un ejercicio de las sesiones de fuerza tipo (y lo quita como core del descanso donde estuviera).
+ * Devuelve solo las sesiones tipo que cambian, para guardarlas.
+ */
+export function removeExerciseFromTemplates(templates, exerciseId) {
+  const changed = []
+  for (const template of templates) {
+    const items = (template.items ?? [])
+      .filter((item) => item.exerciseId !== exerciseId)
+      .map((item) => (item.coreExerciseId === exerciseId ? { ...item, coreExerciseId: null } : item))
+    const touched = items.length !== (template.items ?? []).length || items.some((item, i) => item !== template.items[i])
+    if (touched) changed.push({ ...template, items })
+  }
+  return changed
+}
+
+/** Archiva o restaura un ejercicio: archivado no sale en las listas ni se puede añadir a sesiones, pero conserva su historial. */
+export function setArchived(exercise, archived) {
+  const { archived: previous, ...rest } = exercise // eslint-disable-line no-unused-vars
+  return archived ? { ...rest, archived: true } : rest
+}
+
+export const isArchived = (exercise) => Boolean(exercise?.archived)
+
 /** Identificador nuevo para un ejercicio creado por el usuario. */
 export const newExerciseId = (now = Date.now()) => `custom-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`
 

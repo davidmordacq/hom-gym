@@ -210,7 +210,15 @@ export default function App() {
           <Progress db={state.db} sessions={state.sessions} exercises={state.exercises} scales={state.scales} templates={state.templates} />
         )}
         {tab === 'exercises' && (
-          <Exercises db={state.db} exercises={state.exercises} scales={state.scales} rules={state.rules} onChanged={reload} />
+          <Exercises
+            db={state.db}
+            exercises={state.exercises}
+            scales={state.scales}
+            rules={state.rules}
+            sessions={state.sessions}
+            templates={state.templates}
+            onChanged={reload}
+          />
         )}
         {tab === 'settings' && (
           <Settings

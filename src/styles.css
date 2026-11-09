@@ -1128,3 +1128,9 @@ textarea:focus-visible {
 .mobility-paused .rest-clock {
   color: var(--muted);
 }
+
+.archived-toggle {
+  width: 100%;
+  flex: none;
+  margin-top: 16px;
+}

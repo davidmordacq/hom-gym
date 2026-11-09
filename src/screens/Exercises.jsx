@@ -1,23 +1,29 @@
 import { useMemo, useState } from 'react'
 import { MUSCLE_GROUPS } from '../core/defaultData.js'
 import {
-  blankExercise, groupExercises, levelsEasyToHard, newExerciseId, searchExercises, targetText, toDraft,
+  blankExercise, exerciseUsage, groupExercises, isArchived, levelsEasyToHard, newExerciseId, removeExerciseFromTemplates,
+  searchExercises, setArchived, targetText, toDraft,
 } from '../core/exercises.js'
 import { parseYoutubeId } from '../core/youtube.js'
 import { put, remove } from '../storage/db.js'
+import { loadExerciseHistory } from '../storage/sessions.js'
 import { RESISTANCE_TYPE_HELP, RESISTANCE_TYPE_LABELS } from '../ui/labels.js'
 import VideoPlayer from '../ui/VideoPlayer.jsx'
 import ExerciseForm from './ExerciseForm.jsx'
 
 const groupLabel = (id) => MUSCLE_GROUPS.find((g) => g.id === id)?.label ?? id
 
-export default function Exercises({ db, exercises, scales, rules, onChanged }) {
+export default function Exercises({ db, exercises, scales, rules, sessions, templates, onChanged }) {
   // view: { mode: 'list' } | { mode: 'detail', id } | { mode: 'form', id } (id null = nuevo)
   const [view, setView] = useState({ mode: 'list' })
   const [query, setQuery] = useState('')
   const [error, setError] = useState(null)
+  const [notice, setNotice] = useState(null) // por qué no se pudo borrar un ejercicio
+  const [showArchived, setShowArchived] = useState(false)
 
-  const groups = useMemo(() => groupExercises(searchExercises(exercises, query)), [exercises, query])
+  const archivedCount = exercises.filter(isArchived).length
+  const visible = useMemo(() => (showArchived ? exercises : exercises.filter((e) => !isArchived(e))), [exercises, showArchived])
+  const groups = useMemo(() => groupExercises(searchExercises(visible, query)), [visible, query])
   const selected = view.id ? exercises.find((e) => e.id === view.id) : null
 
   async function save(exercise) {
@@ -27,9 +33,35 @@ export default function Exercises({ db, exercises, scales, rules, onChanged }) {
     setView({ mode: 'detail', id: toSave.id })
   }
 
-  async function removeExercise(exercise) {
-    if (!window.confirm(`¿Borrar «${exercise.name}»? Esta acción no se puede deshacer.`)) return
+  async function toggleArchive(exercise) {
+    setError(null)
+    setNotice(null)
     try {
+      await put(db, 'exercises', setArchived(exercise, !isArchived(exercise)))
+      await onChanged()
+    } catch (e) {
+      setError(`No se pudo guardar el cambio: ${e.message}`)
+    }
+  }
+
+  async function removeExercise(exercise) {
+    setError(null)
+    setNotice(null)
+    try {
+      // Si ya tiene historial, no se borra: el historial dejaría de contar. Se ofrece archivarlo.
+      const usage = exerciseUsage({ exerciseId: exercise.id, sets: await loadExerciseHistory(db, [exercise.id]), sessions, templates })
+      if (usage.blocked) {
+        setNotice(
+          `No se puede borrar «${exercise.name}»: está en tu historial` +
+            `${usage.sets > 0 ? ` (${usage.sets} ${usage.sets === 1 ? 'serie' : 'series'} en ${usage.sessions} ${usage.sessions === 1 ? 'sesión' : 'sesiones'})` : ''}. ` +
+            'Si la borraras, esas sesiones dejarían de contar en Progreso. Puedes archivarla: desaparece de las listas y de las sesiones nuevas, ' +
+            'pero conserva su historial, y la puedes restaurar cuando quieras.',
+        )
+        return
+      }
+      const where = usage.templates.length > 0 ? ` Se quitará de las sesiones: ${usage.templates.join(', ')}.` : ''
+      if (!window.confirm(`¿Borrar «${exercise.name}»?${where} Esta acción no se puede deshacer.`)) return
+      for (const template of removeExerciseFromTemplates(templates, exercise.id)) await put(db, 'templates', template)
       await remove(db, 'exercises', exercise.id)
       await onChanged()
       setView({ mode: 'list' })
@@ -121,9 +153,18 @@ export default function Exercises({ db, exercises, scales, rules, onChanged }) {
         </section>
 
         {error && <p className="message message-error">{error}</p>}
+        {notice && (
+          <p className="message" role="status">
+            {notice}
+          </p>
+        )}
+        {isArchived(selected) && <p className="muted small">Este ejercicio está archivado: no sale en las listas ni se puede añadir a sesiones nuevas.</p>}
         <div className="actions">
           <button type="button" className="btn btn-primary" onClick={() => setView({ mode: 'form', id: selected.id })}>
             Editar
+          </button>
+          <button type="button" className="btn btn-secondary" onClick={() => toggleArchive(selected)}>
+            {isArchived(selected) ? 'Restaurar' : 'Archivar'}
           </button>
           <button type="button" className="btn btn-secondary btn-danger" onClick={() => removeExercise(selected)}>
             Borrar
@@ -156,6 +197,11 @@ export default function Exercises({ db, exercises, scales, rules, onChanged }) {
         </section>
       )}
       {exercises.length > 0 && groups.length === 0 && <p className="muted">Ningún ejercicio coincide con la búsqueda.</p>}
+      {archivedCount > 0 && (
+        <button type="button" className="btn btn-secondary archived-toggle" aria-pressed={showArchived} onClick={() => setShowArchived((v) => !v)}>
+          {showArchived ? 'Ocultar archivados' : `Mostrar archivados (${archivedCount})`}
+        </button>
+      )}
 
       {groups.map((group) => (
         <section key={group.groupId} aria-label={group.label}>
@@ -163,11 +209,19 @@ export default function Exercises({ db, exercises, scales, rules, onChanged }) {
           <ul className="exercise-list">
             {group.exercises.map((exercise) => (
               <li key={exercise.id}>
-                <button type="button" className="exercise-row" onClick={() => setView({ mode: 'detail', id: exercise.id })}>
+                <button
+                  type="button"
+                  className="exercise-row"
+                  onClick={() => {
+                    setNotice(null)
+                    setView({ mode: 'detail', id: exercise.id })
+                  }}
+                >
                   <span className="exercise-name">{exercise.name}</span>
                   <span className="muted small">
                     {exercise.muscleGroups.map(groupLabel).join(' · ')}
                     {exercise.videoUrl ? ' · ▶ vídeo' : ''}
+                    {isArchived(exercise) ? ' · archivado' : ''}
                   </span>
                 </button>
               </li>
