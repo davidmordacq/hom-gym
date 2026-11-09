@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_SCALES } from './defaultData.js'
+import { DEFAULT_SCALES, MUSCLE_GROUPS, MUSCLE_REGIONS, regionOfGroup } from './defaultData.js'
+import { DEFAULT_EXERCISES } from './exerciseLibrary.js'
 import { DEFAULT_PROGRESSION_RULES } from './progressionConfig.js'
-import { blankExercise, groupExercises, newExerciseId, searchExercises, targetText, toDraft, validateExercise } from './exercises.js'
+import { blankExercise, groupExercises, mainMuscleGroup, newExerciseId, searchExercises, targetText, toDraft, validateExercise } from './exercises.js'
 
 const scales = DEFAULT_SCALES
 const valid = () => ({
@@ -198,5 +199,34 @@ describe('targetText', () => {
     expect(targetText({ rules: { targetSets: 4, repRange: { min: 5 } } }, { ...DEFAULT_PROGRESSION_RULES, repRange: { min: 8, max: 10 } })).toBe(
       '4 series de 5-10 repeticiones',
     )
+  })
+})
+
+describe('región y grupo principal (análisis)', () => {
+  it('un ejercicio se anota en su grupo principal: el primero de la lista', () => {
+    expect(mainMuscleGroup({ muscleGroups: ['triceps', 'chest', 'shoulders'] })).toBe('triceps')
+    expect(mainMuscleGroup({ muscleGroups: [] })).toBeNull()
+    expect(mainMuscleGroup(undefined)).toBeNull()
+  })
+
+  it('cada grupo muscular pertenece a una sola región: superior, inferior o core', () => {
+    for (const group of MUSCLE_GROUPS) {
+      const regions = MUSCLE_REGIONS.filter((r) => r.groups.includes(group.id))
+      expect(regions, group.id).toHaveLength(1)
+    }
+    expect(MUSCLE_REGIONS.flatMap((r) => r.groups).sort()).toEqual(MUSCLE_GROUPS.map((g) => g.id).sort())
+  })
+
+  it('regionOfGroup', () => {
+    expect(regionOfGroup('chest')).toBe('upper')
+    expect(regionOfGroup('back')).toBe('upper')
+    expect(regionOfGroup('glutes')).toBe('lower')
+    expect(regionOfGroup('calves')).toBe('lower')
+    expect(regionOfGroup('core')).toBe('core')
+    expect(regionOfGroup('nada')).toBeNull()
+  })
+
+  it('todos los ejercicios de la biblioteca tienen grupo principal con región', () => {
+    for (const exercise of DEFAULT_EXERCISES) expect(regionOfGroup(mainMuscleGroup(exercise)), exercise.id).not.toBeNull()
   })
 })

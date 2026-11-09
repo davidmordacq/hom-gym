@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toIsoDate, weekdayOf } from '../core/dates.js'
+import { weekProgress } from '../core/history.js'
 import { SESSION_STATUS, SESSION_TYPES } from '../core/model.js'
 import { estimateMinutes, itemTargetText, minutesText, sortTemplates, suggestNextTemplateId } from '../core/templates.js'
 import { durationMinutes, QUICK_TYPES, startStrengthSession } from '../core/workout.js'
@@ -83,6 +84,7 @@ export default function Today({ db, plan, templates, exercises, sessions, rules,
   const slotDoneToday = (slot) => doneToday.some((s) => s.slotId === slot.id && s.status === SESSION_STATUS.DONE)
   const sortedTemplates = sortTemplates(templates)
   const suggested = suggestNextTemplateId(templates, sessions)
+  const week = weekProgress({ plan, sessions, today: now })
 
   async function start(template, slotId = null) {
     setError(null)
@@ -125,6 +127,21 @@ export default function Today({ db, plan, templates, exercises, sessions, rules,
     <>
       <h1>Hoy</h1>
       <p className="muted day-text">{todayText}</p>
+
+      <p className="week-line" aria-label="Esta semana">
+        <span className="muted small">Esta semana:</span>{' '}
+        {[
+          ['Fuerza', week.strength],
+          ['Bici', week.bike],
+          ['Movilidad', week.mobility],
+        ]
+          .filter(([, w]) => w.planned > 0 || w.done > 0)
+          .map(([label, w]) => (
+            <span className="badge badge-gap" key={label}>
+              {label} {w.done}/{w.planned}
+            </span>
+          ))}
+      </p>
 
       {running && (
         <section className="card running-card">

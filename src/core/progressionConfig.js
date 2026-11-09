@@ -23,6 +23,48 @@ export const DEFAULT_PROGRESSION_RULES = Object.freeze({
 
 const isPositiveInt = (n) => Number.isInteger(n) && n >= 1
 
+const MAX_REPS = 100
+const MAX_SETS = 10
+
+/**
+ * Revisa lo que David escribe en Ajustes (rango de repeticiones y series por defecto) y lo mezcla con las demás
+ * reglas actuales. Devuelve { errors: [textos], rules }; si hay errores, `rules` es null.
+ */
+export function validateGlobalRules(input, current = DEFAULT_PROGRESSION_RULES) {
+  const errors = []
+  const blank = (v) => v === '' || v === null || v === undefined
+  const min = Number(input.min)
+  const max = Number(input.max)
+  const sets = Number(input.sets)
+
+  if (blank(input.min) || blank(input.max) || !Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < 1) {
+    errors.push('El rango de repeticiones debe ser de números enteros desde 1.')
+  } else if (min > max) {
+    errors.push('El mínimo de repeticiones no puede ser mayor que el máximo.')
+  } else if (max > MAX_REPS) {
+    errors.push(`El máximo de repeticiones no puede pasar de ${MAX_REPS}.`)
+  }
+  if (blank(input.sets) || !Number.isInteger(sets) || sets < 1 || sets > MAX_SETS) {
+    errors.push(`Las series por defecto deben ser un número entero de 1 a ${MAX_SETS}.`)
+  }
+  if (errors.length > 0) return { errors, rules: null }
+  return { errors, rules: { ...current, repRange: { min, max }, targetSets: sets } }
+}
+
+/**
+ * Devuelve las reglas guardadas si son válidas; si están dañadas o incompletas (por ejemplo, tras restaurar una copia
+ * rara), vuelve a las de fábrica para que la app no se rompa.
+ */
+export function sanitizeRules(stored) {
+  try {
+    if (!stored || typeof stored !== 'object') return DEFAULT_PROGRESSION_RULES
+    getRulesForExercise(undefined, stored)
+    return stored
+  } catch {
+    return DEFAULT_PROGRESSION_RULES
+  }
+}
+
 /**
  * Devuelve las reglas que aplican a un ejercicio: las globales con los ajustes propios del ejercicio encima.
  * Lanza un error si algún valor no tiene sentido (por ejemplo, rango mínimo mayor que el máximo).

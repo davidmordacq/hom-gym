@@ -34,6 +34,12 @@ export function toDraft(exercise) {
   }
 }
 
+/**
+ * Grupo muscular al que se anota un ejercicio en el análisis: el principal (el primero de su lista).
+ * Decisión de David (2026-11-09): un ejercicio que trabaja varios músculos cuenta solo para el principal.
+ */
+export const mainMuscleGroup = (exercise) => exercise?.muscleGroups?.[0] ?? null
+
 /** Identificador nuevo para un ejercicio creado por el usuario. */
 export const newExerciseId = (now = Date.now()) => `custom-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`
 

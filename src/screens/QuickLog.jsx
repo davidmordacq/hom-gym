@@ -7,18 +7,21 @@ import { SESSION_TYPE_LABELS } from '../ui/labels.js'
 const isBike = (type) => type === SESSION_TYPES.BIKE_TRAINER || type === SESSION_TYPES.BIKE_OUTDOOR
 
 /** Registro sencillo de bici (rodillo u outdoor) o movilidad: hecha o no, duración, TSS, esfuerzo y notas. */
-export default function QuickLog({ type, slot, onSave, onCancel }) {
-  const [draft, setDraft] = useState({
-    type,
-    slotId: slot?.id ?? null,
-    name: slot?.name ?? SESSION_TYPE_LABELS[type],
-    date: toIsoDate(new Date()),
-    status: SESSION_STATUS.DONE,
-    durationMin: '',
-    tss: '',
-    effort: '',
-    notes: '',
-  })
+export default function QuickLog({ type, slot, initial, onSave, onCancel }) {
+  // `initial` (una sesión ya guardada, en forma de borrador) = se está editando.
+  const [draft, setDraft] = useState(
+    initial ?? {
+      type,
+      slotId: slot?.id ?? null,
+      name: slot?.name ?? SESSION_TYPE_LABELS[type],
+      date: toIsoDate(new Date()),
+      status: SESSION_STATUS.DONE,
+      durationMin: '',
+      tss: '',
+      effort: '',
+      notes: '',
+    },
+  )
   const [errors, setErrors] = useState([])
   const [saving, setSaving] = useState(false)
   const set = (field, value) => setDraft((previous) => ({ ...previous, [field]: value }))
@@ -40,7 +43,9 @@ export default function QuickLog({ type, slot, onSave, onCancel }) {
 
   return (
     <form onSubmit={submit} noValidate>
-      <h1>Registrar {SESSION_TYPE_LABELS[type].toLowerCase()}</h1>
+      <h1>
+        {initial ? 'Editar' : 'Registrar'} {SESSION_TYPE_LABELS[type].toLowerCase()}
+      </h1>
 
       <section className="card">
         <label className="field">

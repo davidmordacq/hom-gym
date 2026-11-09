@@ -60,6 +60,19 @@ export const MUSCLE_GROUPS = [
   { id: 'calves', label: 'Gemelos' },
 ]
 
+/**
+ * Regiones del cuerpo para ver el análisis "en general" (decisión de David, 2026-11-09: poder ver superior o inferior).
+ * El core queda aparte porque no es ni superior ni inferior; se puede cambiar si David prefiere otra cosa.
+ */
+export const MUSCLE_REGIONS = [
+  { id: 'upper', label: 'Tren superior', groups: ['chest', 'back', 'shoulders', 'biceps', 'triceps'] },
+  { id: 'lower', label: 'Tren inferior', groups: ['quads', 'hamstrings', 'glutes', 'calves'] },
+  { id: 'core', label: 'Core', groups: ['core'] },
+]
+
+/** Región a la que pertenece un grupo muscular (o null si no se conoce). */
+export const regionOfGroup = (groupId) => MUSCLE_REGIONS.find((region) => region.groups.includes(groupId))?.id ?? null
+
 /** Plan semanal de ejemplo (1 = lunes ... 7 = domingo). Un día puede tener varias sesiones. */
 export const DEFAULT_WEEK_PLAN = [
   { id: 'mon-strength', weekday: 1, type: SESSION_TYPES.STRENGTH, name: 'Fuerza', flexible: true },

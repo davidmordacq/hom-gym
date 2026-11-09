@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { createBackup, parseBackup } from '../core/backup.js'
 import { toIsoDate } from '../core/dates.js'
+import { validateGlobalRules } from '../core/progressionConfig.js'
 import { exportAll, replaceAll, setSetting } from '../storage/db.js'
 import { THEMES, applyTheme } from '../theme.js'
 
@@ -10,8 +11,11 @@ const REST_MAX = 300
 
 const formatRest = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
-export default function Settings({ db, theme, persisted, restSeconds, onChanged }) {
+export default function Settings({ db, theme, persisted, restSeconds, rules, onChanged }) {
   const [message, setMessage] = useState(null)
+  const [goal, setGoal] = useState({ min: rules.repRange.min, max: rules.repRange.max, sets: rules.targetSets })
+  const [goalErrors, setGoalErrors] = useState([])
+  const [goalSaved, setGoalSaved] = useState(false)
   const fileInput = useRef(null)
 
   async function changeTheme(newTheme) {
@@ -28,6 +32,21 @@ export default function Settings({ db, theme, persisted, restSeconds, onChanged 
       await onChanged()
     } catch (error) {
       setMessage({ kind: 'error', text: `No se pudo guardar el descanso: ${error.message}` })
+    }
+  }
+
+  async function saveGoal(event) {
+    event.preventDefault()
+    setGoalSaved(false)
+    const result = validateGlobalRules(goal, rules)
+    setGoalErrors(result.errors)
+    if (!result.rules) return
+    try {
+      await setSetting(db, 'progressionRules', result.rules)
+      await onChanged()
+      setGoalSaved(true)
+    } catch (error) {
+      setGoalErrors([`No se pudo guardar: ${error.message}`])
     }
   }
 
@@ -107,6 +126,43 @@ export default function Settings({ db, theme, persisted, restSeconds, onChanged 
         </div>
       </section>
 
+      <form className="card" onSubmit={saveGoal} noValidate>
+        <h2>Objetivo por defecto</h2>
+        <p className="muted small">
+          Repeticiones y series que se esperan en cada ejercicio. Cada ejercicio puede tener su propio rango (en Ejercicios, Editar).
+          Tus sesiones ya creadas conservan sus series.
+        </p>
+        <div className="field">
+          <span className="field-label">Repeticiones por serie, de mínimo a máximo</span>
+          <div className="range">
+            <input type="number" inputMode="numeric" min="1" aria-label="Mínimo de repeticiones" value={goal.min} onChange={(e) => setGoal({ ...goal, min: e.target.value })} />
+            <span aria-hidden="true">a</span>
+            <input type="number" inputMode="numeric" min="1" aria-label="Máximo de repeticiones" value={goal.max} onChange={(e) => setGoal({ ...goal, max: e.target.value })} />
+          </div>
+        </div>
+        <label className="field">
+          <span className="field-label">Series por ejercicio</span>
+          <input type="number" inputMode="numeric" min="1" max="10" value={goal.sets} onChange={(e) => setGoal({ ...goal, sets: e.target.value })} />
+        </label>
+        {goalErrors.length > 0 && (
+          <ul className="message message-error errors" role="alert">
+            {goalErrors.map((text) => (
+              <li key={text}>{text}</li>
+            ))}
+          </ul>
+        )}
+        {goalSaved && (
+          <p className="message message-ok" role="status">
+            Guardado.
+          </p>
+        )}
+        <div className="actions">
+          <button type="submit" className="btn btn-primary">
+            Guardar objetivo
+          </button>
+        </div>
+      </form>
+
       <section className="card">
         <h2>Copia de seguridad</h2>
         <p className="muted">
@@ -134,7 +190,7 @@ export default function Settings({ db, theme, persisted, restSeconds, onChanged 
         </p>
       </section>
 
-      <p className="muted small">Hom Gym · Fase 1, entrega 1d</p>
+      <p className="muted small">Hom Gym · Fase 1, entrega 1e</p>
     </>
   )
 }

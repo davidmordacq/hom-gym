@@ -214,8 +214,27 @@ export const QUICK_TYPES = Object.freeze([SESSION_TYPES.BIKE_TRAINER, SESSION_TY
 const isBike = (type) => type === SESSION_TYPES.BIKE_TRAINER || type === SESSION_TYPES.BIKE_OUTDOOR
 const isBlank = (v) => v === '' || v === null || v === undefined
 
-/** Revisa un registro de bici o movilidad. Devuelve { errors, session }; si hay errores, `session` es null. */
-export function validateQuickLog(input, { now = new Date(), id = newSessionId(now.getTime()) } = {}) {
+/** Convierte una sesión de bici o movilidad guardada en lo que edita el formulario (todo texto, vacío si no hay dato). */
+export function toQuickDraft(session) {
+  return {
+    id: session.id,
+    type: session.type,
+    slotId: session.slotId ?? null,
+    name: session.name,
+    date: session.date,
+    status: session.status === SESSION_STATUS.SKIPPED ? SESSION_STATUS.SKIPPED : SESSION_STATUS.DONE,
+    durationMin: session.durationMin ?? '',
+    tss: session.tss ?? '',
+    effort: session.effort ?? '',
+    notes: session.notes ?? '',
+  }
+}
+
+/**
+ * Revisa un registro de bici o movilidad. Devuelve { errors, session }; si hay errores, `session` es null.
+ * Si `input.id` existe (se está editando una sesión guardada), se conserva.
+ */
+export function validateQuickLog(input, { now = new Date(), id = input.id || newSessionId(now.getTime()) } = {}) {
   const errors = []
   if (!QUICK_TYPES.includes(input.type)) errors.push('Elige el tipo de sesión.')
 

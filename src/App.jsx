@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { DEFAULT_PROGRESSION_RULES } from './core/progressionConfig.js'
+import { DEFAULT_PROGRESSION_RULES, sanitizeRules } from './core/progressionConfig.js'
 import { getAll, getSetting, openDb } from './storage/db.js'
 import { DEFAULT_GOALS } from './core/defaultData.js'
 import { DEFAULT_REST_SECONDS } from './core/templates.js'
@@ -7,7 +7,7 @@ import { seedIfNeeded, seedLibraryIfNeeded, seedScaleLevelsIfNeeded, seedTemplat
 import { applyTheme } from './theme.js'
 import { CalendarIcon, DumbbellIcon, HistoryIcon, HomeIcon, SlidersIcon } from './ui/icons.jsx'
 import Exercises from './screens/Exercises.jsx'
-import Placeholder from './screens/Placeholder.jsx'
+import History from './screens/History.jsx'
 import SessionRunner from './screens/SessionRunner.jsx'
 import Settings from './screens/Settings.jsx'
 import Today from './screens/Today.jsx'
@@ -49,7 +49,8 @@ async function loadAppData(db) {
     getSetting(db, 'restSeconds', DEFAULT_REST_SECONDS),
   ])
   applyTheme(theme)
-  return { plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds }
+  // Si las reglas guardadas estuvieran dañadas, se usan las de fábrica en vez de romper la app.
+  return { plan, theme, exercises, scales, rules: sanitizeRules(rules), templates, sessions, goals, restSeconds }
 }
 
 export default function App() {
@@ -148,12 +149,21 @@ export default function App() {
             onChanged={reload}
           />
         )}
-        {tab === 'history' && <Placeholder title="Historial" entrega="1e" text="Aquí verás los entrenos que ya hiciste." />}
+        {tab === 'history' && (
+          <History db={state.db} sessions={state.sessions} exercises={state.exercises} scales={state.scales} onChanged={reload} />
+        )}
         {tab === 'exercises' && (
           <Exercises db={state.db} exercises={state.exercises} scales={state.scales} rules={state.rules} onChanged={reload} />
         )}
         {tab === 'settings' && (
-          <Settings db={state.db} theme={state.theme} persisted={state.persisted} restSeconds={state.restSeconds} onChanged={reload} />
+          <Settings
+            db={state.db}
+            theme={state.theme}
+            persisted={state.persisted}
+            restSeconds={state.restSeconds}
+            rules={state.rules}
+            onChanged={reload}
+          />
         )}
       </main>
       <nav className="tabbar" aria-label="Secciones">

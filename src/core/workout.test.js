@@ -5,7 +5,7 @@ import { suggestNextTemplateId } from './templates.js'
 import {
   WARNING_SECONDS, addSetToExercise, buildSet, crossedEnd, crossedWarning, defaultLevelId, defaultReps, durationMinutes,
   finishSession, formatClock, goToExercise, lastPerformance, lastPerformanceText, repStep, restRemaining, sessionSummary,
-  setExerciseNotes, setId, startStrengthSession, touchExercise, validateQuickLog,
+  setExerciseNotes, setId, startStrengthSession, toQuickDraft, touchExercise, validateQuickLog,
 } from './workout.js'
 
 const upper = DEFAULT_TEMPLATES[0]
@@ -272,5 +272,28 @@ describe('validateQuickLog (bici y movilidad)', () => {
     expect(run({ ...ok, effort: '11' }).errors).toHaveLength(1)
     expect(run({ ...ok, effort: '0' }).errors).toHaveLength(1)
     expect(run({ ...ok, type: 'strength' }).errors).toHaveLength(1)
+  })
+})
+
+describe('editar un registro de bici o movilidad', () => {
+  const saved = validateQuickLog({ type: 'bike_outdoor', date: '2026-11-08', status: 'done', durationMin: '95', tss: '82', effort: '7', notes: 'larga', name: 'Bici outdoor', slotId: 'sat-outdoor' }, { now: NOW, id: 'q1' }).session
+
+  it('toQuickDraft devuelve texto para el formulario, vacío donde no hay dato', () => {
+    expect(toQuickDraft(saved)).toMatchObject({ id: 'q1', type: 'bike_outdoor', date: '2026-11-08', status: 'done', durationMin: 95, tss: 82, effort: 7, notes: 'larga', slotId: 'sat-outdoor' })
+    const skipped = validateQuickLog({ type: 'mobility', date: '2026-11-04', status: 'skipped' }, { now: NOW, id: 'q2' }).session
+    expect(toQuickDraft(skipped)).toMatchObject({ status: 'skipped', durationMin: '', tss: '', effort: '' })
+  })
+
+  it('guardar de nuevo lo editado conserva el id y el hueco del plan, y cambia lo corregido', () => {
+    const edited = validateQuickLog({ ...toQuickDraft(saved), tss: '90' }, { now: NOW }).session
+    expect(edited.id).toBe('q1')
+    expect(edited.slotId).toBe('sat-outdoor')
+    expect(edited.tss).toBe(90)
+    expect(edited.durationMin).toBe(95)
+  })
+
+  it('un registro nuevo (sin id) recibe uno nuevo', () => {
+    const fresh = validateQuickLog({ type: 'mobility', date: '2026-11-08', status: 'done', durationMin: 20 }, { now: NOW }).session
+    expect(fresh.id).toMatch(/^ses-/)
   })
 })

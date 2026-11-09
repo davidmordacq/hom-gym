@@ -758,3 +758,29 @@ textarea:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Historial y semana */
+.history-filter {
+  margin-bottom: 14px;
+}
+
+.history-filter .seg {
+  padding: 0 4px;
+  font-size: 0.9rem;
+}
+
+.history-list .exercise-row {
+  align-items: flex-start;
+}
+
+.week-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 0;
+  margin-top: -2px;
+}
+
+.message-ok {
+  color: var(--accent);
+}
