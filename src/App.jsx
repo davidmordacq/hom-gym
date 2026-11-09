@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { DEFAULT_PROGRESSION_RULES } from './core/progressionConfig.js'
 import { getAll, getSetting, openDb } from './storage/db.js'
 import { DEFAULT_GOALS } from './core/defaultData.js'
+import { DEFAULT_REST_SECONDS } from './core/templates.js'
 import { seedIfNeeded, seedLibraryIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded } from './storage/seed.js'
 import { applyTheme } from './theme.js'
 import { CalendarIcon, DumbbellIcon, HistoryIcon, HomeIcon, SlidersIcon } from './ui/icons.jsx'
 import Exercises from './screens/Exercises.jsx'
 import Placeholder from './screens/Placeholder.jsx'
+import SessionRunner from './screens/SessionRunner.jsx'
 import Settings from './screens/Settings.jsx'
 import Today from './screens/Today.jsx'
 import Week from './screens/Week.jsx'
@@ -35,7 +37,7 @@ async function loadAppData(db) {
   await seedLibraryIfNeeded(db)
   await seedScaleLevelsIfNeeded(db)
   await seedTemplatesIfNeeded(db)
-  const [plan, theme, exercises, scales, rules, templates, sessions, goals] = await Promise.all([
+  const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds] = await Promise.all([
     getAll(db, 'plan'),
     getSetting(db, 'theme', 'dark'),
     getAll(db, 'exercises'),
@@ -44,13 +46,15 @@ async function loadAppData(db) {
     getAll(db, 'templates'),
     getAll(db, 'sessions'),
     getSetting(db, 'goals', DEFAULT_GOALS),
+    getSetting(db, 'restSeconds', DEFAULT_REST_SECONDS),
   ])
   applyTheme(theme)
-  return { plan, theme, exercises, scales, rules, templates, sessions, goals }
+  return { plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds }
 }
 
 export default function App() {
   const [tab, setTab] = useState('today')
+  const [runningId, setRunningId] = useState(null) // sesión de fuerza abierta a pantalla completa
   const [state, setState] = useState({ status: 'loading' })
 
   useEffect(() => {
@@ -92,11 +96,45 @@ export default function App() {
     )
   }
 
+  // La sesión en curso ocupa toda la pantalla (sin menú inferior) para no tocarlo sin querer.
+  if (runningId) {
+    return (
+      <div className="app">
+        <main className="screen">
+          <SessionRunner
+            db={state.db}
+            sessionId={runningId}
+            exercises={state.exercises}
+            scales={state.scales}
+            rules={state.rules}
+            restSeconds={state.restSeconds}
+            sessions={state.sessions}
+            onExit={async () => {
+              setRunningId(null)
+              await reload()
+            }}
+            onChanged={reload}
+          />
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       <main className="screen">
         {tab === 'today' && (
-          <Today plan={state.plan} templates={state.templates} exercises={state.exercises} sessions={state.sessions} rules={state.rules} />
+          <Today
+            db={state.db}
+            plan={state.plan}
+            templates={state.templates}
+            exercises={state.exercises}
+            sessions={state.sessions}
+            rules={state.rules}
+            restSeconds={state.restSeconds}
+            onOpenSession={setRunningId}
+            onChanged={reload}
+          />
         )}
         {tab === 'week' && (
           <Week
@@ -105,6 +143,7 @@ export default function App() {
             templates={state.templates}
             exercises={state.exercises}
             rules={state.rules}
+            restSeconds={state.restSeconds}
             goals={state.goals}
             onChanged={reload}
           />
@@ -113,7 +152,9 @@ export default function App() {
         {tab === 'exercises' && (
           <Exercises db={state.db} exercises={state.exercises} scales={state.scales} rules={state.rules} onChanged={reload} />
         )}
-        {tab === 'settings' && <Settings db={state.db} theme={state.theme} persisted={state.persisted} onChanged={reload} />}
+        {tab === 'settings' && (
+          <Settings db={state.db} theme={state.theme} persisted={state.persisted} restSeconds={state.restSeconds} onChanged={reload} />
+        )}
       </main>
       <nav className="tabbar" aria-label="Secciones">
         {TABS.map(({ id, label, Icon }) => (

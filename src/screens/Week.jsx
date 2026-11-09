@@ -14,7 +14,7 @@ import TemplateEditor from './TemplateEditor.jsx'
 
 const formatTimes = (n) => n.toLocaleString('es-ES', { maximumFractionDigits: 1 })
 
-export default function Week({ db, plan, templates, exercises, rules, goals, onChanged }) {
+export default function Week({ db, plan, templates, exercises, rules, restSeconds, goals, onChanged }) {
   // view: { mode: 'week' } | { mode: 'slot', id (null = nueva), weekday } | { mode: 'template', id (null = nueva) }
   const [view, setView] = useState({ mode: 'week' })
   const [error, setError] = useState(null)
@@ -69,6 +69,7 @@ export default function Week({ db, plan, templates, exercises, rules, goals, onC
         templates={templates}
         exercises={exercises}
         rules={rules}
+        restSeconds={restSeconds}
         isNew={!editing}
         onSave={async (template) => {
           await put(db, 'templates', template.id ? template : { ...template, id: newTemplateId() })
@@ -107,7 +108,7 @@ export default function Week({ db, plan, templates, exercises, rules, goals, onC
           </section>
         )}
         {sortedTemplates.map((template) => {
-          const minutes = estimateMinutes(template, exercises, { rules })
+          const minutes = estimateMinutes(template, exercises, { rules, restSeconds })
           return (
             <section className="card" key={template.id}>
               <p className="card-title">{template.name}</p>

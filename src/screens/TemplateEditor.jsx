@@ -5,8 +5,10 @@ import {
   validateTemplate,
 } from '../core/templates.js'
 
+const formatRest = (seconds) => (seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds} s`)
+
 /** Editor de una sesión de fuerza: ejercicios, series, cada lado y core en el descanso. */
-export default function TemplateEditor({ initial, templates, exercises, rules, isNew, onSave, onDelete, onCancel }) {
+export default function TemplateEditor({ initial, templates, exercises, rules, restSeconds, isNew, onSave, onDelete, onCancel }) {
   const [draft, setDraft] = useState(initial)
   const [errors, setErrors] = useState([])
   const [saving, setSaving] = useState(false)
@@ -18,7 +20,7 @@ export default function TemplateEditor({ initial, templates, exercises, rules, i
     () => exercises.filter((e) => e.muscleGroups.includes('core')).sort((a, b) => a.name.localeCompare(b.name, 'es')),
     [exercises],
   )
-  const minutes = estimateMinutes(draft, exercises, { rules })
+  const minutes = estimateMinutes(draft, exercises, { rules, restSeconds })
 
   const setItems = (items) => setDraft((previous) => ({ ...previous, items }))
   const changeItem = (index, patch) => setItems(draft.items.map((item, i) => (i === index ? { ...item, ...patch } : item)))
@@ -105,8 +107,8 @@ export default function TemplateEditor({ initial, templates, exercises, rules, i
           {minutes > MAX_SESSION_MINUTES && ` (pasa de ${MAX_SESSION_MINUTES} min)`}
         </p>
         <p className="muted small">
-          Calcula 5 min de calentamiento, unos 45 s por serie (el doble si se hace con cada lado) y 2 min de descanso tras
-          cada serie. El core del descanso no suma tiempo. Es una estimación, no una medida.
+          Calcula 5 min de calentamiento, unos 45 s por serie (el doble si se hace con cada lado) y {formatRest(restSeconds)} de
+          descanso tras cada serie. El core del descanso no suma tiempo. Es una estimación: el tiempo real se mide en cada sesión.
         </p>
       </section>
 

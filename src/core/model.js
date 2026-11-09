@@ -36,6 +36,7 @@ export const SESSION_TYPES = Object.freeze({
 /** Estado de una sesión planificada. */
 export const SESSION_STATUS = Object.freeze({
   PENDING: 'pending',
+  IN_PROGRESS: 'in_progress', // sesión empezada y sin terminar
   DONE: 'done',
   MOVED: 'moved', // se hizo otro día distinto al previsto
   SKIPPED: 'skipped',
@@ -87,14 +88,34 @@ export const PROGRESSION_ACTIONS = Object.freeze({
  * @property {Partial<import('./progressionConfig.js').ProgressionRules>} [rules] ajustes propios de este ejercicio
  *
  * @typedef {Object} SetLog
+ * @property {string} id         `${sessionId}:${exerciseId}:${order}` (marcar de nuevo la misma serie la sobrescribe)
  * @property {string} sessionId
  * @property {string} exerciseId
  * @property {string} date       fecha ISO (AAAA-MM-DD)
  * @property {number} order      número de serie dentro de la sesión (1, 2, 3...)
- * @property {number} reps
+ * @property {number} reps       repeticiones (o segundos, si el ejercicio se mide en segundos)
  * @property {string|null} levelId  nivel de la escala usado (o 'none' = sin banda en ejercicios asistidos)
+ * @property {string} completedAt   momento exacto en que se marcó (ISO); sirve para el análisis de tiempos
+ * @property {boolean} [coreAfter]  si en el descanso posterior a esta serie se hizo el core previsto
  * @property {number} [effort]   esfuerzo percibido 1-10 (opcional)
  * @property {string} [notes]
+ *
+ * @typedef {Object} SessionLog
+ * Una sesión realizada (o en curso). Las de fuerza llevan `exercises` (copia de la sesión tipo al empezar, para que
+ * cambiarla después no altere el historial) y las marcas de tiempo reales; las de bici y movilidad, los datos sencillos.
+ * @property {string} id
+ * @property {'strength'|'mobility'|'bike_trainer'|'bike_outdoor'} type
+ * @property {'in_progress'|'done'|'skipped'|'moved'} status
+ * @property {string} date          día en que empezó (AAAA-MM-DD)
+ * @property {string} name
+ * @property {string|null} slotId   hueco del plan del que viene (null si David la empezó por su cuenta)
+ * @property {string|null} templateId
+ * @property {string|null} startedAt  ISO
+ * @property {string|null} endedAt    ISO
+ * @property {number|null} [durationMin]  solo bici y movilidad
+ * @property {number|null} [tss]          solo bici
+ * @property {number|null} [effort]       1-10
+ * @property {string} notes
  *
  * @typedef {Object} PlanSlot
  * Una sesión prevista en la semana.

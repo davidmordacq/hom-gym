@@ -4,7 +4,13 @@ import { toIsoDate } from '../core/dates.js'
 import { exportAll, replaceAll, setSetting } from '../storage/db.js'
 import { THEMES, applyTheme } from '../theme.js'
 
-export default function Settings({ db, theme, persisted, onChanged }) {
+const REST_STEP = 15
+const REST_MIN = 30
+const REST_MAX = 300
+
+const formatRest = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+
+export default function Settings({ db, theme, persisted, restSeconds, onChanged }) {
   const [message, setMessage] = useState(null)
   const fileInput = useRef(null)
 
@@ -12,6 +18,17 @@ export default function Settings({ db, theme, persisted, onChanged }) {
     applyTheme(newTheme)
     await setSetting(db, 'theme', newTheme)
     await onChanged()
+  }
+
+  async function changeRest(delta) {
+    const next = Math.min(REST_MAX, Math.max(REST_MIN, restSeconds + delta))
+    if (next === restSeconds) return
+    try {
+      await setSetting(db, 'restSeconds', next)
+      await onChanged()
+    } catch (error) {
+      setMessage({ kind: 'error', text: `No se pudo guardar el descanso: ${error.message}` })
+    }
   }
 
   async function exportBackup() {
@@ -73,6 +90,24 @@ export default function Settings({ db, theme, persisted, onChanged }) {
       </section>
 
       <section className="card">
+        <h2>Descanso entre series</h2>
+        <div className="item-row">
+          <span className="muted">Cuenta atrás tras cada serie. Avisa cuando quedan 15 s.</span>
+          <div className="stepper" role="group" aria-label="Descanso entre series">
+            <button type="button" className="step-btn" aria-label="Menos descanso" onClick={() => changeRest(-REST_STEP)}>
+              −
+            </button>
+            <span className="step-value" aria-live="polite">
+              {formatRest(restSeconds)}
+            </span>
+            <button type="button" className="step-btn" aria-label="Más descanso" onClick={() => changeRest(REST_STEP)}>
+              +
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="card">
         <h2>Copia de seguridad</h2>
         <p className="muted">
           Tus datos están guardados solo en este dispositivo. Descarga una copia de vez en cuando; con ella puedes
@@ -99,7 +134,7 @@ export default function Settings({ db, theme, persisted, onChanged }) {
         </p>
       </section>
 
-      <p className="muted small">Hom Gym · Fase 1, entrega 1c</p>
+      <p className="muted small">Hom Gym · Fase 1, entrega 1d</p>
     </>
   )
 }

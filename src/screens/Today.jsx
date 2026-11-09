@@ -1,11 +1,16 @@
 import { useState } from 'react'
-import { weekdayOf } from '../core/dates.js'
-import { SESSION_TYPES } from '../core/model.js'
+import { toIsoDate, weekdayOf } from '../core/dates.js'
+import { SESSION_STATUS, SESSION_TYPES } from '../core/model.js'
 import { estimateMinutes, itemTargetText, minutesText, sortTemplates, suggestNextTemplateId } from '../core/templates.js'
+import { durationMinutes, QUICK_TYPES, startStrengthSession } from '../core/workout.js'
+import { discardSession, saveSession } from '../storage/sessions.js'
 import { SESSION_TYPE_LABELS } from '../ui/labels.js'
+import QuickLog from './QuickLog.jsx'
 
-/** Una sesión de fuerza del día: propone la que toca y deja cambiarla. */
-function StrengthCard({ slot, templates, exercises, sessions, rules }) {
+const timeOf = (iso) => new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+
+/** Una sesión de fuerza del plan: propone la que toca, deja cambiarla y empezarla. */
+function StrengthCard({ slot, templates, exercises, sessions, rules, restSeconds, blocked, doneToday, onStart }) {
   const [chosen, setChosen] = useState(null)
   const sorted = sortTemplates(templates)
   const suggested = suggestNextTemplateId(templates, sessions)
@@ -18,6 +23,7 @@ function StrengthCard({ slot, templates, exercises, sessions, rules }) {
   return (
     <section className="card">
       <span className="badge">{SESSION_TYPE_LABELS[slot.type]}</span>
+      {doneToday && <span className="badge badge-gap today-badge">Hecha hoy ✓</span>}
       <p className="card-title">{slot.name}</p>
 
       {!template ? (
@@ -38,7 +44,7 @@ function StrengthCard({ slot, templates, exercises, sessions, rules }) {
             </label>
           )}
           <p className="muted small">
-            {template.items.length} ejercicios · {minutesText(estimateMinutes(template, exercises, { rules }))}
+            {template.items.length} ejercicios · {minutesText(estimateMinutes(template, exercises, { rules, restSeconds }))}
           </p>
           <ol className="today-list">
             {template.items.map((item) => {
@@ -53,41 +59,167 @@ function StrengthCard({ slot, templates, exercises, sessions, rules }) {
               )
             })}
           </ol>
+          <div className="actions">
+            <button type="button" className="btn btn-primary" disabled={blocked} onClick={() => onStart(template, slot.id)}>
+              Empezar sesión
+            </button>
+          </div>
         </>
       )}
     </section>
   )
 }
 
-export default function Today({ plan, templates, exercises, sessions, rules }) {
+export default function Today({ db, plan, templates, exercises, sessions, rules, restSeconds, onOpenSession, onChanged }) {
+  const [logging, setLogging] = useState(null) // { type, slot }
+  const [error, setError] = useState(null)
   const now = new Date()
+  const todayIso = toIsoDate(now)
   const rawDate = now.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
   const todayText = rawDate.charAt(0).toUpperCase() + rawDate.slice(1) // "Domingo, 8 de noviembre"
   const slots = plan.filter((slot) => slot.weekday === weekdayOf(now))
+  const running = sessions.find((s) => s.status === SESSION_STATUS.IN_PROGRESS) ?? null
+  const doneToday = sessions.filter((s) => s.date === todayIso && (s.status === SESSION_STATUS.DONE || s.status === SESSION_STATUS.SKIPPED))
+  const slotDoneToday = (slot) => doneToday.some((s) => s.slotId === slot.id && s.status === SESSION_STATUS.DONE)
+  const sortedTemplates = sortTemplates(templates)
+  const suggested = suggestNextTemplateId(templates, sessions)
+
+  async function start(template, slotId = null) {
+    setError(null)
+    try {
+      const session = startStrengthSession({ template, slotId })
+      await saveSession(db, session)
+      await onChanged()
+      onOpenSession(session.id)
+    } catch (e) {
+      setError(`No se pudo empezar la sesión: ${e.message}`)
+    }
+  }
+
+  async function discardRunning() {
+    if (!window.confirm(`¿Descartar la sesión «${running.name}»? Se borrará todo lo que anotaste en ella. No se puede deshacer.`)) return
+    try {
+      await discardSession(db, running.id)
+      await onChanged()
+    } catch (e) {
+      setError(`No se pudo descartar: ${e.message}`)
+    }
+  }
+
+  if (logging) {
+    return (
+      <QuickLog
+        type={logging.type}
+        slot={logging.slot}
+        onSave={async (session) => {
+          await saveSession(db, session)
+          await onChanged()
+          setLogging(null)
+        }}
+        onCancel={() => setLogging(null)}
+      />
+    )
+  }
 
   return (
     <>
       <h1>Hoy</h1>
       <p className="muted day-text">{todayText}</p>
 
+      {running && (
+        <section className="card running-card">
+          <span className="badge">En curso</span>
+          <p className="card-title">{running.name}</p>
+          <p className="muted small">Empezó a las {timeOf(running.startedAt)}.</p>
+          <div className="actions">
+            <button type="button" className="btn btn-primary" onClick={() => onOpenSession(running.id)}>
+              Continuar sesión
+            </button>
+            <button type="button" className="btn btn-secondary btn-danger" onClick={discardRunning}>
+              Descartar
+            </button>
+          </div>
+        </section>
+      )}
+
+      {error && <p className="message message-error">{error}</p>}
+
       {slots.length === 0 ? (
         <section className="card">
-          <p>No tienes nada previsto para hoy.</p>
+          <p>No tienes nada previsto para hoy. Aun así, puedes empezar cualquier sesión aquí abajo.</p>
         </section>
       ) : (
         slots.map((slot) =>
           slot.type === SESSION_TYPES.STRENGTH ? (
-            <StrengthCard key={slot.id} slot={slot} templates={templates} exercises={exercises} sessions={sessions} rules={rules} />
+            <StrengthCard
+              key={slot.id}
+              slot={slot}
+              templates={templates}
+              exercises={exercises}
+              sessions={sessions}
+              rules={rules}
+              restSeconds={restSeconds}
+              blocked={Boolean(running)}
+              doneToday={slotDoneToday(slot)}
+              onStart={start}
+            />
           ) : (
             <section className="card" key={slot.id}>
               <span className="badge">{SESSION_TYPE_LABELS[slot.type] ?? slot.type}</span>
+              {slotDoneToday(slot) && <span className="badge badge-gap today-badge">Hecha hoy ✓</span>}
               <p className="card-title">{slot.name}</p>
+              <div className="actions">
+                <button type="button" className="btn btn-secondary" onClick={() => setLogging({ type: slot.type, slot })}>
+                  Registrar
+                </button>
+              </div>
             </section>
           ),
         )
       )}
 
-      <p className="muted small">El botón para empezar el entreno llega en la entrega 1d.</p>
+      <section className="card" aria-label="Otra sesión">
+        <h2>Otra sesión</h2>
+        <p className="muted small">Empieza la que quieras, aunque hoy ya hayas entrenado o no estuviera en el plan.</p>
+        {running && <p className="muted small">Primero termina o descarta la sesión en curso.</p>}
+        {sortedTemplates.length > 0 && (
+          <div className="stack">
+            {sortedTemplates.map((template) => (
+              <button key={template.id} type="button" className="btn btn-secondary" disabled={Boolean(running)} onClick={() => start(template)}>
+                Empezar {template.name}
+                {template.id === suggested ? ' (la que toca)' : ''}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className="stack">
+          {QUICK_TYPES.map((type) => (
+            <button key={type} type="button" className="btn btn-secondary" onClick={() => setLogging({ type, slot: null })}>
+              Registrar {SESSION_TYPE_LABELS[type].toLowerCase()}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {doneToday.length > 0 && (
+        <section className="card" aria-label="Hecho hoy">
+          <h2>Hecho hoy</h2>
+          <ul className="summary-list">
+            {doneToday.map((s) => {
+              const minutes = s.durationMin ?? durationMinutes(s.startedAt, s.endedAt)
+              return (
+                <li key={s.id}>
+                  <span className="exercise-name">{s.name}</span>
+                  <span className="muted small">
+                    {s.status === SESSION_STATUS.SKIPPED ? 'No la hiciste' : minutes ? `${minutes} min` : 'Hecha'}
+                    {s.tss ? ` · TSS ${s.tss}` : ''}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      )}
     </>
   )
 }
