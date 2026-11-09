@@ -5,6 +5,8 @@ import { validateGlobalRules } from '../core/progressionConfig.js'
 import { buildBackupFile, canShareFiles, downloadBackup, markBackupDone, shareBackup } from '../ui/backupFile.js'
 import { testAlert } from '../ui/feedback.js'
 import { replaceAll, setSetting } from '../storage/db.js'
+import { readSecrets, restoreSecrets } from '../storage/secrets.js'
+import IntervalsCard from './IntervalsCard.jsx'
 import { THEMES, applyTheme } from '../theme.js'
 
 const VIBRATION_TEXT = {
@@ -19,7 +21,7 @@ const REST_MAX = 300
 
 const formatRest = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
-export default function Settings({ db, theme, persisted, restSeconds, rules, lastBackupAt, onChanged }) {
+export default function Settings({ db, theme, persisted, restSeconds, rules, lastBackupAt, intervals, onChanged }) {
   const [message, setMessage] = useState(null)
   const [goal, setGoal] = useState({ min: rules.repRange.min, max: rules.repRange.max, sets: rules.targetSets })
   const [goalErrors, setGoalErrors] = useState([])
@@ -97,7 +99,9 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, las
         `Vas a sustituir TODOS tus datos actuales por los de la copia del ${when}. Esto no se puede deshacer. ¿Continuar?`,
       )
       if (!ok) return
+      const secrets = await readSecrets(db) // la copia no lleva las claves personales: se conservan las de este dispositivo
       await replaceAll(db, backup.data)
+      await restoreSecrets(db, secrets)
       await onChanged()
       setMessage({ kind: 'ok', text: 'Copia restaurada correctamente.' })
     } catch (error) {
@@ -231,6 +235,14 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, las
             : 'El navegador no garantiza que tus datos se conserven si falta espacio: haz copias con frecuencia.'}
         </p>
       </section>
+
+      <IntervalsCard
+        db={db}
+        connected={intervals.connected}
+        lastSyncAt={intervals.lastSyncAt}
+        lastResult={intervals.lastResult}
+        onChanged={onChanged}
+      />
 
       <p className="muted small">Hom Gym · Fase 1, entrega 1e</p>
     </>

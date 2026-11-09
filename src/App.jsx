@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { autoSyncDue } from './core/intervals.js'
 import { DEFAULT_PROGRESSION_RULES, sanitizeRules } from './core/progressionConfig.js'
+import { syncIntervals } from './storage/intervalsSync.js'
 import { getAll, getSetting, openDb } from './storage/db.js'
 import { DEFAULT_GOALS } from './core/defaultData.js'
 import { DEFAULT_REST_SECONDS } from './core/templates.js'
@@ -40,7 +42,7 @@ async function loadAppData(db) {
   await seedLibraryIfNeeded(db)
   await seedScaleLevelsIfNeeded(db)
   await seedTemplatesIfNeeded(db)
-  const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds, installedAt, lastBackupAt, backupSnoozedUntil] = await Promise.all([
+  const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds, installedAt, lastBackupAt, backupSnoozedUntil, intervalsKey, intervalsLastSyncAt, intervalsLastResult] = await Promise.all([
     getAll(db, 'plan'),
     getSetting(db, 'theme', 'dark'),
     getAll(db, 'exercises'),
@@ -53,10 +55,28 @@ async function loadAppData(db) {
     getSetting(db, 'installedAt', null),
     getSetting(db, 'lastBackupAt', null),
     getSetting(db, 'backupSnoozedUntil', null),
+    getSetting(db, 'intervalsApiKey', null),
+    getSetting(db, 'intervalsLastSyncAt', null),
+    getSetting(db, 'intervalsLastResult', null),
   ])
   applyTheme(theme)
   // Si las reglas guardadas estuvieran dañadas, se usan las de fábrica en vez de romper la app.
-  return { plan, theme, exercises, scales, rules: sanitizeRules(rules), templates, sessions, goals, restSeconds, installedAt, lastBackupAt, backupSnoozedUntil }
+  return {
+    plan,
+    theme,
+    exercises,
+    scales,
+    rules: sanitizeRules(rules),
+    templates,
+    sessions,
+    goals,
+    restSeconds,
+    installedAt,
+    lastBackupAt,
+    backupSnoozedUntil,
+    // La clave en sí no sale de la base de datos: la pantalla solo sabe si está conectado.
+    intervals: { connected: Boolean(intervalsKey), lastSyncAt: intervalsLastSyncAt, lastResult: intervalsLastResult },
+  }
 }
 
 export default function App() {
@@ -87,6 +107,19 @@ export default function App() {
     const data = await loadAppData(state.db)
     setState((previous) => ({ ...previous, ...data }))
   }, [state.db])
+
+  // Al abrir la app, si Intervals.icu está conectado y hace más de 6 horas que no se sincroniza, se sincroniza solo.
+  // Un fallo (sin internet, por ejemplo) no molesta: queda apuntado en Ajustes.
+  const autoSynced = useRef(false)
+  useEffect(() => {
+    if (state.status !== 'ready' || autoSynced.current) return
+    autoSynced.current = true
+    if (!state.intervals.connected || !autoSyncDue(state.intervals.lastSyncAt)) return
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+    syncIntervals(state.db)
+      .catch(() => {})
+      .finally(() => reload())
+  }, [state.status]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (state.status === 'loading') return <p className="status">Abriendo…</p>
 
@@ -187,6 +220,7 @@ export default function App() {
             restSeconds={state.restSeconds}
             rules={state.rules}
             lastBackupAt={state.lastBackupAt}
+            intervals={state.intervals}
             onChanged={reload}
           />
         )}

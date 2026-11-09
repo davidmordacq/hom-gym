@@ -114,6 +114,8 @@ export const PROGRESSION_ACTIONS = Object.freeze({
  * @property {string|null} endedAt    ISO
  * @property {number|null} [durationMin]  solo bici y movilidad
  * @property {number|null} [tss]          solo bici
+ * @property {string} [source]            'intervals' si se importó de Intervals.icu (si no, la anotó David)
+ * @property {string} [externalId]        identificador de la actividad en Intervals.icu
  * @property {number|null} [effort]       1-10
  * @property {string} notes
  *

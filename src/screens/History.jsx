@@ -4,6 +4,7 @@ import { SESSION_STATUS, SESSION_TYPES } from '../core/model.js'
 import { findLevel } from '../core/resistance.js'
 import { toQuickDraft, sessionSummary } from '../core/workout.js'
 import { getAll } from '../storage/db.js'
+import { ignoreImportedSession } from '../storage/intervalsSync.js'
 import { discardSession, saveSession } from '../storage/sessions.js'
 import { SESSION_TYPE_LABELS } from '../ui/labels.js'
 import QuickLog from './QuickLog.jsx'
@@ -45,8 +46,13 @@ export default function History({ db, sessions, exercises, scales, onChanged }) 
   const selected = view.id ? sessions.find((s) => s.id === view.id) : null
 
   async function remove(session) {
-    if (!window.confirm(`¿Borrar «${session.name}» del ${dateText(session.date)}? Se borrarán también sus series. No se puede deshacer.`)) return
+    const imported = session.source === 'intervals'
+    const warning = imported
+      ? 'No volverá a importarse de Intervals.icu. No se puede deshacer.'
+      : 'Se borrarán también sus series. No se puede deshacer.'
+    if (!window.confirm(`¿Borrar «${session.name}» del ${dateText(session.date)}? ${warning}`)) return
     try {
+      if (imported) await ignoreImportedSession(db, session.id) // así la siguiente sincronización no la trae otra vez
       await discardSession(db, session.id)
       await onChanged()
       setView({ mode: 'list' })
@@ -121,6 +127,9 @@ export default function History({ db, sessions, exercises, scales, onChanged }) 
             </>
           )}
           {selected.notes && <p className="muted">«{selected.notes}»</p>}
+          {selected.source === 'intervals' && (
+            <p className="muted small">Importada de Intervals.icu. Para corregirla, cámbiala allí y vuelve a sincronizar.</p>
+          )}
         </section>
 
         {isStrength &&
@@ -153,7 +162,7 @@ export default function History({ db, sessions, exercises, scales, onChanged }) 
 
         {error && <p className="message message-error">{error}</p>}
         <div className="actions">
-          {!isStrength && (
+          {!isStrength && selected.source !== 'intervals' && (
             <button type="button" className="btn btn-primary" onClick={() => setView({ mode: 'edit', id: selected.id })}>
               Editar
             </button>
