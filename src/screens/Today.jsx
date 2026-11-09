@@ -3,8 +3,11 @@ import { toIsoDate, weekdayOf } from '../core/dates.js'
 import { weekProgress } from '../core/history.js'
 import { SESSION_STATUS, SESSION_TYPES } from '../core/model.js'
 import { estimateMinutes, itemTargetText, minutesText, sortTemplates, suggestNextTemplateId } from '../core/templates.js'
-import { durationMinutes, QUICK_TYPES, startStrengthSession } from '../core/workout.js'
+import { durationMinutes, QUICK_TYPES, startMobilitySession, startStrengthSession } from '../core/workout.js'
+import { backupStatus, backupText, snoozeUntil } from '../core/backupStatus.js'
+import { setSetting } from '../storage/db.js'
 import { discardSession, saveSession } from '../storage/sessions.js'
+import { buildBackupFile, canShareFiles, downloadBackup, markBackupDone, shareBackup } from '../ui/backupFile.js'
 import { SESSION_TYPE_LABELS } from '../ui/labels.js'
 import QuickLog from './QuickLog.jsx'
 
@@ -71,7 +74,61 @@ function StrengthCard({ slot, templates, exercises, sessions, rules, restSeconds
   )
 }
 
-export default function Today({ db, plan, templates, exercises, sessions, rules, restSeconds, onOpenSession, onChanged }) {
+/** Aviso semanal de copia de seguridad (una web no puede hacerla sola: avisa al abrir la app). */
+function BackupReminder({ db, status, onChanged }) {
+  const [message, setMessage] = useState(null)
+
+  async function save() {
+    try {
+      downloadBackup(await buildBackupFile(db))
+      await markBackupDone(db)
+      await onChanged()
+    } catch (e) {
+      setMessage(`No se pudo crear la copia: ${e.message}`)
+    }
+  }
+  async function share() {
+    try {
+      if ((await shareBackup(await buildBackupFile(db))) === 'shared') {
+        await markBackupDone(db)
+        await onChanged()
+      }
+    } catch (e) {
+      setMessage(`No se pudo compartir la copia: ${e.message}`)
+    }
+  }
+  async function later() {
+    try {
+      await setSetting(db, 'backupSnoozedUntil', snoozeUntil())
+      await onChanged()
+    } catch (e) {
+      setMessage(`No se pudo posponer: ${e.message}`)
+    }
+  }
+
+  return (
+    <section className="card backup-card">
+      <h2>Toca hacer una copia de seguridad</h2>
+      <p>{backupText(status)} Tus datos solo están en este dispositivo.</p>
+      {message && <p className="message message-error">{message}</p>}
+      <div className="actions">
+        <button type="button" className="btn btn-primary" onClick={save}>
+          Descargar copia
+        </button>
+        {canShareFiles() && (
+          <button type="button" className="btn btn-secondary" onClick={share}>
+            Compartir copia
+          </button>
+        )}
+        <button type="button" className="btn btn-secondary" onClick={later}>
+          Mañana
+        </button>
+      </div>
+    </section>
+  )
+}
+
+export default function Today({ db, plan, templates, exercises, sessions, rules, restSeconds, lastBackupAt, backupSnoozedUntil, onOpenSession, onChanged }) {
   const [logging, setLogging] = useState(null) // { type, slot }
   const [error, setError] = useState(null)
   const now = new Date()
@@ -85,11 +142,28 @@ export default function Today({ db, plan, templates, exercises, sessions, rules,
   const sortedTemplates = sortTemplates(templates)
   const suggested = suggestNextTemplateId(templates, sessions)
   const week = weekProgress({ plan, sessions, today: now })
+  const backup = backupStatus({
+    lastBackupAt,
+    sessionCount: sessions.filter((s) => s.status !== SESSION_STATUS.IN_PROGRESS).length,
+    snoozedUntil: backupSnoozedUntil,
+  })
 
   async function start(template, slotId = null) {
     setError(null)
     try {
       const session = startStrengthSession({ template, slotId, restSeconds })
+      await saveSession(db, session)
+      await onChanged()
+      onOpenSession(session.id)
+    } catch (e) {
+      setError(`No se pudo empezar la sesión: ${e.message}`)
+    }
+  }
+
+  async function startMobility(slot = null) {
+    setError(null)
+    try {
+      const session = startMobilitySession({ slot })
       await saveSession(db, session)
       await onChanged()
       onOpenSession(session.id)
@@ -143,6 +217,8 @@ export default function Today({ db, plan, templates, exercises, sessions, rules,
           ))}
       </p>
 
+      {backup.due && <BackupReminder db={db} status={backup} onChanged={onChanged} />}
+
       {running && (
         <section className="card running-card">
           <span className="badge">En curso</span>
@@ -186,8 +262,13 @@ export default function Today({ db, plan, templates, exercises, sessions, rules,
               {slotDoneToday(slot) && <span className="badge badge-gap today-badge">Hecha hoy ✓</span>}
               <p className="card-title">{slot.name}</p>
               <div className="actions">
+                {slot.type === SESSION_TYPES.MOBILITY && (
+                  <button type="button" className="btn btn-primary" disabled={Boolean(running)} onClick={() => startMobility(slot)}>
+                    Empezar
+                  </button>
+                )}
                 <button type="button" className="btn btn-secondary" onClick={() => setLogging({ type: slot.type, slot })}>
-                  Registrar
+                  {slot.type === SESSION_TYPES.MOBILITY ? 'Registrar ya hecha' : 'Registrar'}
                 </button>
               </div>
             </section>
@@ -210,9 +291,13 @@ export default function Today({ db, plan, templates, exercises, sessions, rules,
           </div>
         )}
         <div className="stack">
+          <button type="button" className="btn btn-secondary" disabled={Boolean(running)} onClick={() => startMobility()}>
+            Empezar movilidad
+          </button>
           {QUICK_TYPES.map((type) => (
             <button key={type} type="button" className="btn btn-secondary" onClick={() => setLogging({ type, slot: null })}>
               Registrar {SESSION_TYPE_LABELS[type].toLowerCase()}
+              {type === SESSION_TYPES.MOBILITY ? ' ya hecha' : ''}
             </button>
           ))}
         </div>

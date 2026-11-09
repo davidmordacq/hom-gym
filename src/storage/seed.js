@@ -1,5 +1,6 @@
 // Datos de la primera vez que se abre la app (o tras borrar todo).
 
+import { toIsoDate } from '../core/dates.js'
 import {
   DEFAULT_GOALS, DEFAULT_SCALES, DEFAULT_TEMPLATES, DEFAULT_WEEK_PLAN, SCALE_LEVEL_ADDITIONS,
 } from '../core/defaultData.js'
@@ -18,6 +19,7 @@ export async function seedIfNeeded(db) {
       { key: 'progressionRules', value: DEFAULT_PROGRESSION_RULES },
       { key: 'theme', value: 'dark' },
       { key: 'seeded', value: true },
+      { key: 'installedAt', value: toIsoDate() }, // desde cuándo se usa la app (el calendario no marca "no hechas" antes)
     ],
   })
   return true

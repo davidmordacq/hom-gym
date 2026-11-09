@@ -3,7 +3,7 @@ import { DEFAULT_SCALES, DEFAULT_TEMPLATES } from './defaultData.js'
 import { DEFAULT_EXERCISES } from './exerciseLibrary.js'
 import { suggestNextTemplateId } from './templates.js'
 import {
-  WARNING_SECONDS, addSetToExercise, buildSet, crossedEnd, crossedWarning, defaultLevelId, defaultReps, durationMinutes,
+  WARNING_SECONDS, addSetToExercise, buildSet, finishMobilitySession, startMobilitySession, crossedEnd, crossedWarning, defaultLevelId, defaultReps, durationMinutes,
   finishSession, formatClock, goToExercise, lastPerformance, lastPerformanceText, repStep, restRemaining, sessionSummary,
   setExerciseNotes, setId, startStrengthSession, toQuickDraft, touchExercise, validateQuickLog,
 } from './workout.js'
@@ -295,5 +295,36 @@ describe('editar un registro de bici o movilidad', () => {
   it('un registro nuevo (sin id) recibe uno nuevo', () => {
     const fresh = validateQuickLog({ type: 'mobility', date: '2026-11-08', status: 'done', durationMin: 20 }, { now: NOW }).session
     expect(fresh.id).toMatch(/^ses-/)
+  })
+})
+
+describe('sesión de movilidad con inicio y fin', () => {
+  const started = startMobilitySession({ now: new Date('2026-11-09T07:00:00Z'), id: 'm1' })
+
+  it('empieza en curso, con la hora de inicio y sin duración todavía', () => {
+    expect(started).toMatchObject({ id: 'm1', type: 'mobility', status: 'in_progress', name: 'Movilidad', slotId: null, endedAt: null, durationMin: null })
+    expect(started.startedAt).toBe('2026-11-09T07:00:00.000Z')
+  })
+
+  it('si viene de un hueco del plan, lo recuerda y usa su nombre', () => {
+    const s = startMobilitySession({ slot: { id: 'tue-mobility', name: 'Movilidad por la mañana' }, now: NOW, id: 'm2' })
+    expect(s).toMatchObject({ slotId: 'tue-mobility', name: 'Movilidad por la mañana' })
+  })
+
+  it('al terminar queda hecha con los minutos reales', () => {
+    const done = finishMobilitySession(started, { notes: ' cadera y hombros ', now: new Date('2026-11-09T07:16:20Z') })
+    expect(done).toMatchObject({ status: 'done', durationMin: 16, endedAt: '2026-11-09T07:16:20.000Z', notes: 'cadera y hombros' })
+    expect(started.status).toBe('in_progress') // el original no cambia
+  })
+
+  it('una sesión de menos de un minuto cuenta 1 minuto', () => {
+    expect(finishMobilitySession(started, { now: new Date('2026-11-09T07:00:10Z') }).durationMin).toBe(1)
+  })
+
+  it('cuenta para el historial y para el calendario como una sesión de movilidad hecha', () => {
+    const done = finishMobilitySession(started, { now: new Date('2026-11-09T07:15:00Z') })
+    expect(done.type).toBe('mobility')
+    expect(done.status).toBe('done')
+    expect(done.durationMin).toBe(15)
   })
 })

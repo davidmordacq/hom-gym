@@ -1,9 +1,10 @@
 import { useRef, useState } from 'react'
-import { createBackup, parseBackup } from '../core/backup.js'
-import { toIsoDate } from '../core/dates.js'
+import { parseBackup } from '../core/backup.js'
+import { backupStatus, backupText } from '../core/backupStatus.js'
 import { validateGlobalRules } from '../core/progressionConfig.js'
+import { buildBackupFile, canShareFiles, downloadBackup, markBackupDone, shareBackup } from '../ui/backupFile.js'
 import { testAlert } from '../ui/feedback.js'
-import { exportAll, replaceAll, setSetting } from '../storage/db.js'
+import { replaceAll, setSetting } from '../storage/db.js'
 import { THEMES, applyTheme } from '../theme.js'
 
 const VIBRATION_TEXT = {
@@ -18,7 +19,7 @@ const REST_MAX = 300
 
 const formatRest = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
-export default function Settings({ db, theme, persisted, restSeconds, rules, onChanged }) {
+export default function Settings({ db, theme, persisted, restSeconds, rules, lastBackupAt, onChanged }) {
   const [message, setMessage] = useState(null)
   const [goal, setGoal] = useState({ min: rules.repRange.min, max: rules.repRange.max, sets: rules.targetSets })
   const [goalErrors, setGoalErrors] = useState([])
@@ -60,19 +61,28 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, onC
 
   async function exportBackup() {
     try {
-      const backup = createBackup(await exportAll(db))
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `hom-gym-copia-${toIsoDate()}.json`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-      setMessage({ kind: 'ok', text: 'Copia de seguridad descargada. Guárdala en un sitio seguro (por ejemplo, Google Drive).' })
+      downloadBackup(await buildBackupFile(db))
+      await markBackupDone(db)
+      await onChanged()
+      setMessage({
+        kind: 'ok',
+        text: 'Copia descargada: la tienes en la carpeta Descargas de este dispositivo. Guárdala también fuera (por ejemplo, en Google Drive).',
+      })
     } catch (error) {
       setMessage({ kind: 'error', text: `No se pudo crear la copia: ${error.message}` })
+    }
+  }
+
+  async function shareBackupNow() {
+    try {
+      const result = await shareBackup(await buildBackupFile(db))
+      if (result === 'shared') {
+        await markBackupDone(db)
+        await onChanged()
+        setMessage({ kind: 'ok', text: 'Copia compartida. Comprueba que ha llegado a donde la enviaste.' })
+      }
+    } catch (error) {
+      setMessage({ kind: 'error', text: `No se pudo compartir la copia: ${error.message}` })
     }
   }
 
@@ -192,10 +202,19 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, onC
           Tus datos están guardados solo en este dispositivo. Descarga una copia de vez en cuando; con ella puedes
           recuperarlo todo o pasarlo a otro dispositivo.
         </p>
+        <p className="small">
+          <strong>{backupText(backupStatus({ lastBackupAt, sessionCount: 1 }))}</strong> La app te lo recordará al abrirla si pasa una
+          semana.
+        </p>
         <div className="actions">
           <button type="button" className="btn btn-primary" onClick={exportBackup}>
             Descargar copia
           </button>
+          {canShareFiles() && (
+            <button type="button" className="btn btn-secondary" onClick={shareBackupNow}>
+              Compartir copia
+            </button>
+          )}
           <button type="button" className="btn btn-secondary" onClick={() => fileInput.current?.click()}>
             Restaurar copia
           </button>

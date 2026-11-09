@@ -44,6 +44,37 @@ export function startStrengthSession({ template, slotId = null, now = new Date()
   }
 }
 
+/** Empieza una sesión de movilidad: sin ejercicios, solo el reloj hasta que David la termina. */
+export function startMobilitySession({ slot = null, now = new Date(), id = newSessionId(now.getTime()) } = {}) {
+  return {
+    id,
+    type: SESSION_TYPES.MOBILITY,
+    status: SESSION_STATUS.IN_PROGRESS,
+    date: toIsoDate(now),
+    name: slot?.name || 'Movilidad',
+    slotId: slot?.id ?? null,
+    templateId: null,
+    startedAt: now.toISOString(),
+    endedAt: null,
+    durationMin: null,
+    tss: null,
+    effort: null,
+    notes: '',
+  }
+}
+
+/** Termina la sesión de movilidad: queda hecha con los minutos reales (mínimo 1). */
+export function finishMobilitySession(session, { notes = session.notes, now = new Date() } = {}) {
+  const endedAt = now.toISOString()
+  return {
+    ...session,
+    status: SESSION_STATUS.DONE,
+    endedAt,
+    durationMin: durationMinutes(session.startedAt, endedAt) ?? 1,
+    notes: String(notes ?? '').trim(),
+  }
+}
+
 /** Pasa a otro ejercicio. Apunta cuándo se entró en él por primera vez. */
 export function goToExercise(session, index, now = new Date()) {
   const last = session.exercises.length - 1

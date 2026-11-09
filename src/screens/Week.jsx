@@ -9,14 +9,16 @@ import {
 } from '../core/templates.js'
 import { put, remove } from '../storage/db.js'
 import { SESSION_TYPE_LABELS } from '../ui/labels.js'
+import CalendarView from './CalendarView.jsx'
 import SlotForm from './SlotForm.jsx'
 import TemplateEditor from './TemplateEditor.jsx'
 
 const formatTimes = (n) => n.toLocaleString('es-ES', { maximumFractionDigits: 1 })
 
-export default function Week({ db, plan, templates, exercises, rules, restSeconds, goals, onChanged }) {
+export default function Week({ db, plan, templates, sessions, exercises, rules, restSeconds, goals, installedAt, onChanged }) {
   // view: { mode: 'week' } | { mode: 'slot', id (null = nueva), weekday } | { mode: 'template', id (null = nueva) }
   const [view, setView] = useState({ mode: 'week' })
+  const [section, setSection] = useState('calendar') // dentro de la vista 'week': calendario o plan
   const [error, setError] = useState(null)
 
   const sortedTemplates = useMemo(() => sortTemplates(templates), [templates])
@@ -99,7 +101,29 @@ export default function Week({ db, plan, templates, exercises, rules, restSecond
   return (
     <>
       <h1>Semana</h1>
+      <div className="segmented progress-seg" role="group" aria-label="Vista de la semana">
+        {[
+          { id: 'calendar', label: 'Calendario' },
+          { id: 'plan', label: 'Plan' },
+        ].map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={`seg${section === option.id ? ' seg-active' : ''}`}
+            aria-pressed={section === option.id}
+            onClick={() => setSection(option.id)}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
 
+      {section === 'calendar' && (
+        <CalendarView db={db} plan={plan} sessions={sessions} exercises={exercises} goals={goals} installedAt={installedAt} />
+      )}
+
+      {section === 'plan' && (
+      <>
       <section aria-label="Sesiones de fuerza">
         <h2 className="group-title">Sesiones de fuerza</h2>
         {sortedTemplates.length === 0 && (
@@ -201,6 +225,8 @@ export default function Week({ db, plan, templates, exercises, rules, restSecond
             </p>
           )}
         </section>
+      )}
+      </>
       )}
     </>
   )

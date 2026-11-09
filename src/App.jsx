@@ -8,6 +8,7 @@ import { applyTheme } from './theme.js'
 import { CalendarIcon, ChartIcon, DumbbellIcon, HistoryIcon, HomeIcon, SlidersIcon } from './ui/icons.jsx'
 import Exercises from './screens/Exercises.jsx'
 import History from './screens/History.jsx'
+import MobilityRunner from './screens/MobilityRunner.jsx'
 import Progress from './screens/Progress.jsx'
 import SessionRunner from './screens/SessionRunner.jsx'
 import Settings from './screens/Settings.jsx'
@@ -39,7 +40,7 @@ async function loadAppData(db) {
   await seedLibraryIfNeeded(db)
   await seedScaleLevelsIfNeeded(db)
   await seedTemplatesIfNeeded(db)
-  const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds] = await Promise.all([
+  const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds, installedAt, lastBackupAt, backupSnoozedUntil] = await Promise.all([
     getAll(db, 'plan'),
     getSetting(db, 'theme', 'dark'),
     getAll(db, 'exercises'),
@@ -49,10 +50,13 @@ async function loadAppData(db) {
     getAll(db, 'sessions'),
     getSetting(db, 'goals', DEFAULT_GOALS),
     getSetting(db, 'restSeconds', DEFAULT_REST_SECONDS),
+    getSetting(db, 'installedAt', null),
+    getSetting(db, 'lastBackupAt', null),
+    getSetting(db, 'backupSnoozedUntil', null),
   ])
   applyTheme(theme)
   // Si las reglas guardadas estuvieran dañadas, se usan las de fábrica en vez de romper la app.
-  return { plan, theme, exercises, scales, rules: sanitizeRules(rules), templates, sessions, goals, restSeconds }
+  return { plan, theme, exercises, scales, rules: sanitizeRules(rules), templates, sessions, goals, restSeconds, installedAt, lastBackupAt, backupSnoozedUntil }
 }
 
 export default function App() {
@@ -101,6 +105,20 @@ export default function App() {
 
   // La sesión en curso ocupa toda la pantalla (sin menú inferior) para no tocarlo sin querer.
   if (runningId) {
+    const exit = async () => {
+      setRunningId(null)
+      await reload()
+    }
+    const runningType = state.sessions.find((s) => s.id === runningId)?.type
+    if (runningType === 'mobility') {
+      return (
+        <div className="app">
+          <main className="screen">
+            <MobilityRunner db={state.db} sessionId={runningId} onExit={exit} onChanged={reload} />
+          </main>
+        </div>
+      )
+    }
     return (
       <div className="app">
         <main className="screen">
@@ -112,10 +130,7 @@ export default function App() {
             rules={state.rules}
             restSeconds={state.restSeconds}
             sessions={state.sessions}
-            onExit={async () => {
-              setRunningId(null)
-              await reload()
-            }}
+            onExit={exit}
             onChanged={reload}
           />
         </main>
@@ -135,6 +150,8 @@ export default function App() {
             sessions={state.sessions}
             rules={state.rules}
             restSeconds={state.restSeconds}
+            lastBackupAt={state.lastBackupAt}
+            backupSnoozedUntil={state.backupSnoozedUntil}
             onOpenSession={setRunningId}
             onChanged={reload}
           />
@@ -144,10 +161,12 @@ export default function App() {
             db={state.db}
             plan={state.plan}
             templates={state.templates}
+            sessions={state.sessions}
             exercises={state.exercises}
             rules={state.rules}
             restSeconds={state.restSeconds}
             goals={state.goals}
+            installedAt={state.installedAt}
             onChanged={reload}
           />
         )}
@@ -167,6 +186,7 @@ export default function App() {
             persisted={state.persisted}
             restSeconds={state.restSeconds}
             rules={state.rules}
+            lastBackupAt={state.lastBackupAt}
             onChanged={reload}
           />
         )}
