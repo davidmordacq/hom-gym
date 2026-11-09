@@ -2,7 +2,7 @@
 // Solo lógica, sin pantallas.
 
 import { MUSCLE_GROUPS } from './defaultData.js'
-import { EXERCISE_UNITS, SESSION_STATUS, SESSION_TYPES } from './model.js'
+import { EXERCISE_UNITS, RANDOM_CORE, SESSION_STATUS, SESSION_TYPES } from './model.js'
 import { DEFAULT_PROGRESSION_RULES, getRulesForExercise } from './progressionConfig.js'
 
 /** Descanso entre series por defecto (2 minutos). En la entrega 1d será un ajuste. */
@@ -70,7 +70,7 @@ export function validateTemplate(input, { exercises = [], templates = [] } = {})
     }
 
     const core = item.coreExerciseId || null
-    if (core && !known.has(core)) errors.push(`«${exercise.name}»: el core elegido para el descanso ya no existe.`)
+    if (core && core !== RANDOM_CORE && !known.has(core)) errors.push(`«${exercise.name}»: el core elegido para el descanso ya no existe.`)
 
     cleanItems.push({ exerciseId: item.exerciseId, sets, perSide: Boolean(item.perSide), coreExerciseId: core })
   }
@@ -161,9 +161,8 @@ export function weeklyGroupFrequency({ plan, templates, exercises }) {
     const groups = new Set()
     for (const item of template.items ?? []) {
       for (const group of known.get(item.exerciseId)?.muscleGroups ?? []) groups.add(group)
-      // El core del descanso es ligero: solo cuenta su grupo principal (el perro pájaro cuenta como core, no como espalda).
-      const coreGroup = known.get(item.coreExerciseId)?.muscleGroups?.[0]
-      if (coreGroup) groups.add(coreGroup)
+      // Cualquier core en el descanso (fijo o aleatorio, también lumbares) cuenta como core, no como otros músculos.
+      if (item.coreExerciseId) groups.add('core')
     }
     for (const group of groups) result[group] = (result[group] ?? 0) + timesPerWeek
   }

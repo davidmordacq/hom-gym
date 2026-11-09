@@ -16,6 +16,8 @@ import { DEFAULT_REST_SECONDS } from './templates.js'
  * con 2 minutos de descanso, 1 minuto y medio es core (entre que empieza y corta para prepararse para la serie siguiente).
  */
 export const CORE_REST_FRACTION = 0.75
+/** Grupo al que se anota el tiempo del core de los descansos, sea el ejercicio que sea (abdominales o lumbares). */
+export const CORE_REST_GROUP = 'core'
 
 const isStrengthDone = (s) => s.type === SESSION_TYPES.STRENGTH && s.status === SESSION_STATUS.DONE
 const toMs = (iso) => Date.parse(iso)
@@ -66,10 +68,9 @@ export function sessionStats(session, sets, exercises) {
   // Core en los descansos.
   const restSeconds = session.restSeconds ?? DEFAULT_REST_SECONDS
   const coreSeconds = Math.round(restSeconds * CORE_REST_FRACTION)
-  const entries = new Map((session.exercises ?? []).map((e) => [e.exerciseId, e]))
   for (const set of mine.filter((s) => s.coreAfter)) {
-    const coreExercise = byId.get(entries.get(set.exerciseId)?.coreExerciseId)
-    const coreGroup = mainMuscleGroup(coreExercise) ?? 'core'
+    // El core de los descansos (también los ejercicios de lumbares) se anota siempre como "core".
+    const coreGroup = CORE_REST_GROUP
     const lastOrder = Math.max(...mine.filter((s) => s.exerciseId === set.exerciseId).map((s) => s.order))
     const index = blocks.findIndex((b) => b.exerciseId === set.exerciseId)
     // El descanso tras la última serie de un ejercicio cae en el bloque del siguiente.

@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import { parseBackup } from '../core/backup.js'
+import { isArchived } from '../core/exercises.js'
+import { CORE_REST_POOL_IDS } from '../core/exerciseLibrary.js'
 import { backupStatus, backupText } from '../core/backupStatus.js'
 import { validateGlobalRules } from '../core/progressionConfig.js'
 import { buildBackupFile, canShareFiles, downloadBackup, markBackupDone, shareBackup } from '../ui/backupFile.js'
@@ -21,7 +23,7 @@ const REST_MAX = 300
 
 const formatRest = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
-export default function Settings({ db, theme, persisted, restSeconds, rules, lastBackupAt, intervals, onChanged }) {
+export default function Settings({ db, theme, persisted, restSeconds, rules, lastBackupAt, intervals, exercises, corePool, onChanged }) {
   const [message, setMessage] = useState(null)
   const [goal, setGoal] = useState({ min: rules.repRange.min, max: rules.repRange.max, sets: rules.targetSets })
   const [goalErrors, setGoalErrors] = useState([])
@@ -33,6 +35,21 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, las
     applyTheme(newTheme)
     await setSetting(db, 'theme', newTheme)
     await onChanged()
+  }
+
+  // Ejercicios que se pueden elegir como core de los descansos: los de core, los lumbares de la lista por defecto y los ya marcados.
+  const poolCandidates = exercises
+    .filter((e) => !isArchived(e) && (e.muscleGroups.includes('core') || CORE_REST_POOL_IDS.includes(e.id) || corePool.includes(e.id)))
+    .sort((a, b) => a.name.localeCompare(b.name, 'es'))
+
+  async function togglePool(id) {
+    const next = corePool.includes(id) ? corePool.filter((x) => x !== id) : [...corePool, id]
+    try {
+      await setSetting(db, 'corePool', next)
+      await onChanged()
+    } catch (error) {
+      setMessage({ kind: 'error', text: `No se pudo guardar el cambio: ${error.message}` })
+    }
   }
 
   async function changeRest(delta) {
@@ -161,6 +178,35 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, las
             {VIBRATION_TEXT[alertResult.vibration]}
           </p>
         )}
+      </section>
+
+      <section className="card">
+        <h2>Core y lumbares en los descansos</h2>
+        <p className="muted small">
+          En los ejercicios con «core al azar», la app elige en cada descanso uno de estos, sin repetir el mismo dos descansos seguidos
+          y pasando por todos antes de repetir. Marca los que quieras usar.
+        </p>
+        <ul className="pool-list">
+          {poolCandidates.map((exercise) => (
+            <li key={exercise.id}>
+              <label className="check">
+                <input type="checkbox" checked={corePool.includes(exercise.id)} onChange={() => togglePool(exercise.id)} />
+                <span>
+                  {exercise.name}
+                  {exercise.muscleGroups[0] === 'back' ? <span className="muted small"> · lumbares</span> : null}
+                </span>
+              </label>
+            </li>
+          ))}
+        </ul>
+        {corePool.length < 2 && (
+          <p className="message message-error">
+            {corePool.length === 0
+              ? 'Sin ningún ejercicio marcado, los descansos con core al azar quedarán como descanso puro.'
+              : 'Con un solo ejercicio marcado, el core no podrá cambiar entre descansos.'}
+          </p>
+        )}
+        <p className="muted small">Las planchas no están marcadas de partida porque cargan los hombros entre series de dominadas y flexiones; puedes añadirlas.</p>
       </section>
 
       <form className="card" onSubmit={saveGoal} noValidate>

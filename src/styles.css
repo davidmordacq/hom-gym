@@ -1134,3 +1134,21 @@ textarea:focus-visible {
   flex: none;
   margin-top: 16px;
 }
+
+/* Core al azar y saltar */
+.rest-core-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.skip-set {
+  flex: 1 1 100%;
+  min-height: 48px;
+}
+
+.pool-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}

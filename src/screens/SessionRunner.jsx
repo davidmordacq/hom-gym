@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { levelsEasyToHard } from '../core/exercises.js'
+import { isArchived, levelsEasyToHard } from '../core/exercises.js'
 import { findLevel } from '../core/resistance.js'
 import { itemTargetText } from '../core/templates.js'
 import { parseYoutubeId } from '../core/youtube.js'
 import {
-  WARNING_SECONDS, addSetToExercise, buildSet, defaultLevelId, defaultReps, durationMinutes, finishSession, formatClock,
-  goToExercise, lastPerformance, lastPerformanceText, repStep, sessionSummary, setExerciseNotes, touchExercise,
+  WARNING_SECONDS, addSetToExercise, buildSet, chooseCore, defaultLevelId, defaultReps, drawCore, durationMinutes, finishSession,
+  formatClock, goToExercise, lastPerformance, lastPerformanceText, repStep, sessionSummary, setExerciseNotes, skipExercise,
+  skipNextSet, touchExercise,
 } from '../core/workout.js'
-import { EXERCISE_UNITS } from '../core/model.js'
+import { EXERCISE_UNITS, RANDOM_CORE } from '../core/model.js'
 import { deleteSet, discardSession, loadExerciseHistory, loadSession, loadSessionSets, saveSession, saveSet } from '../storage/sessions.js'
 import { keepScreenAwake, unlockAudio } from '../ui/feedback.js'
 import { useRestTimer } from '../ui/useRestTimer.js'
@@ -16,7 +17,7 @@ import VideoPlayer from '../ui/VideoPlayer.jsx'
 const MAX_VALUE = 999
 
 /** Pantalla de la sesión de fuerza en curso: un ejercicio cada vez, series con un toque y descanso con aviso. */
-export default function SessionRunner({ db, sessionId, exercises, scales, rules, restSeconds, sessions, onExit, onChanged }) {
+export default function SessionRunner({ db, sessionId, exercises, scales, rules, restSeconds, corePool, sessions, onExit, onChanged }) {
   const [session, setSession] = useState(null)
   const [sets, setSets] = useState([])
   const [history, setHistory] = useState([])
@@ -32,6 +33,8 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
 
   const byExercise = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises])
   const scaleById = useMemo(() => new Map(scales.map((s) => [s.id, s])), [scales])
+  // Ejercicios de core entre los que se elige al azar en cada descanso (solo los que existen y no están archivados).
+  const validPool = useMemo(() => corePool.filter((id) => byExercise.has(id) && !isArchived(byExercise.get(id))), [corePool, byExercise])
 
   // Carga la sesión y lo hecho en otras sesiones.
   useEffect(() => {
@@ -167,7 +170,9 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
                   <span className="exercise-name">{item.name}</span>
                   <span className="muted small">
                     {item.sets.length === 0
-                      ? 'Sin series'
+                      ? item.skipped
+                        ? 'Saltado'
+                        : 'Sin series'
                       : `${item.sets.map((s) => s.reps).join(', ')} ${item.unit === EXERCISE_UNITS.SECONDS ? 's' : 'rep.'}${
                           item.sets.at(-1).levelId && exercise ? ` · ${findLevel(exercise, scale, item.sets.at(-1).levelId)?.label ?? ''}` : ''
                         }`}
@@ -234,11 +239,13 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
     }
     setError(null)
     const now = new Date()
-    const set = buildSet({ session, exerciseId: entry.exerciseId, order: activeOrder, reps: value, levelId: level, now })
+    // El core del descanso que sigue a esta serie: ninguno, uno fijo o uno distinto al azar (sin repetir seguidos).
+    const draw = chooseCore({ mode: entry.coreExerciseId, pool: validPool, bag: session.coreBag ?? [], lastId: session.lastCoreId ?? null })
+    const set = buildSet({ session, exerciseId: entry.exerciseId, order: activeOrder, reps: value, levelId: level, coreExerciseId: draw.id, now })
     try {
       await saveSet(db, set)
       setSets((current) => [...current.filter((s) => s.id !== set.id), set])
-      await persist(touchExercise(session, entry.exerciseId, now))
+      await persist({ ...touchExercise(session, entry.exerciseId, now), coreBag: draw.bag, lastCoreId: draw.id ?? session.lastCoreId ?? null })
       setRest({ exerciseId: entry.exerciseId, order: activeOrder })
       timer.start(restSeconds)
       setWatch(null)
@@ -283,10 +290,38 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
     return persist(goToExercise(session, index, new Date()))
   }
 
-  // Descanso: el core que corresponde al ejercicio de la última serie marcada.
+  // Saltar la serie que toca (el ejercicio se queda con una menos) o el ejercicio entero (pasa al siguiente).
+  const skipSet = () => {
+    setError(null)
+    return persist(skipNextSet(session, entry.exerciseId, doneSets.length))
+  }
+  const skipCurrentExercise = () => {
+    setError(null)
+    setShowVideo(false)
+    const marked = doneSets.length === 0 ? skipExercise(session, entry.exerciseId) : session // con series hechas, solo se pasa de ejercicio
+    return persist(goToExercise(marked, session.cursor + 1, new Date()))
+  }
+
+  // Descanso: el core de la última serie marcada (el que se eligió al marcarla; en sesiones antiguas, el fijo del ejercicio).
   const restEntry = rest ? session.exercises.find((e) => e.exerciseId === rest.exerciseId) : null
-  const restCore = restEntry?.coreExerciseId ? byExercise.get(restEntry.coreExerciseId) : null
   const restSet = rest ? sets.find((s) => s.exerciseId === rest.exerciseId && s.order === rest.order) : null
+  const fixedCore = restEntry?.coreExerciseId && restEntry.coreExerciseId !== RANDOM_CORE ? restEntry.coreExerciseId : null
+  const restCoreId = restSet?.coreExerciseId ?? fixedCore
+  const restCore = restCoreId ? byExercise.get(restCoreId) : null
+  const canReroll = restEntry?.coreExerciseId === RANDOM_CORE && restSet && !restSet.coreAfter && validPool.length > 1
+
+  // "Otro": si no apetece el core que ha salido, se saca otro de la bolsa (el anterior vuelve a quedar disponible).
+  async function rerollCore() {
+    const draw = drawCore({ bag: session.coreBag ?? [], pool: validPool, lastId: restSet.coreExerciseId })
+    const updated = { ...restSet, coreExerciseId: draw.id }
+    try {
+      await saveSet(db, updated)
+      setSets((current) => current.map((s) => (s.id === updated.id ? updated : s)))
+      await persist({ ...session, coreBag: [...draw.bag, restSet.coreExerciseId], lastCoreId: draw.id })
+    } catch (e) {
+      setError(`No se pudo cambiar el core: ${e.message}`)
+    }
+  }
   const remaining = timer.remaining
   const restPhase = remaining === null ? null : remaining === 0 ? 'done' : remaining <= WARNING_SECONDS ? 'warning' : 'running'
 
@@ -376,7 +411,7 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
                 <span className="set-result">
                   ✓ {done.reps} {isSeconds ? 's' : 'rep.'}
                   {doneLevel ? ` · ${doneLevel.label}` : ''}
-                  {done.coreAfter ? ' · core ✓' : ''}
+                  {done.coreAfter ? ` · core ✓${done.coreExerciseId && byExercise.get(done.coreExerciseId) ? ` ${byExercise.get(done.coreExerciseId).name}` : ''}` : ''}
                 </span>
               </div>
             )
@@ -437,6 +472,9 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
             <button type="button" className="btn btn-primary big-check" onClick={markSet} disabled={watching}>
               ✓ Serie hecha
             </button>
+            <button type="button" className="btn btn-secondary skip-set" onClick={skipSet}>
+              Saltar esta serie
+            </button>
           </div>
         )}
         {activeOrder > rowCount && <p className="muted">Series completadas. Puedes añadir otra o pasar al siguiente ejercicio.</p>}
@@ -474,6 +512,10 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
           <button type="button" className="btn btn-primary" onClick={() => setView('finish')}>
             Terminar sesión
           </button>
+        ) : activeOrder <= rowCount ? (
+          <button type="button" className="btn btn-secondary" onClick={skipCurrentExercise}>
+            Saltar ejercicio →
+          </button>
         ) : (
           <button type="button" className="btn btn-primary" onClick={() => goTo(session.cursor + 1)}>
             Siguiente ejercicio →
@@ -497,9 +539,16 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
             <span className="rest-clock">{formatClock(remaining)}</span>
           </div>
           {restCore && (
-            <button type="button" className={`chip rest-core${restSet?.coreAfter ? ' chip-on' : ''}`} aria-pressed={Boolean(restSet?.coreAfter)} onClick={toggleCore}>
-              {restSet?.coreAfter ? '✓ ' : ''}Core: {restCore.name}
-            </button>
+            <div className="rest-core-row">
+              <button type="button" className={`chip rest-core${restSet?.coreAfter ? ' chip-on' : ''}`} aria-pressed={Boolean(restSet?.coreAfter)} onClick={toggleCore}>
+                {restSet?.coreAfter ? '✓ ' : ''}Core: {restCore.name}
+              </button>
+              {canReroll && (
+                <button type="button" className="chip" onClick={rerollCore}>
+                  Otro
+                </button>
+              )}
+            </div>
           )}
           {!restCore && restPhase !== 'done' && <span className="muted small">Descanso puro</span>}
           <button

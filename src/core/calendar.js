@@ -1,7 +1,6 @@
 // Calendario: qué estaba previsto cada día y qué se cumplió de verdad. Solo lógica, sin pantallas.
 
 import { toIsoDate, weekdayOf } from './dates.js'
-import { mainMuscleGroup } from './exercises.js'
 import { historyGroup, weekEnd, weekStart } from './history.js'
 import { SESSION_STATUS, SESSION_TYPES } from './model.js'
 
@@ -155,14 +154,10 @@ export function weekGroupsWorked({ sessions, sets, exercises, today }) {
   for (const session of sessions) {
     if (session.type !== SESSION_TYPES.STRENGTH || session.status !== SESSION_STATUS.DONE || session.date < from || session.date > to) continue
     const groups = new Set()
-    const entries = new Map((session.exercises ?? []).map((e) => [e.exerciseId, e]))
     for (const set of sets) {
       if (set.sessionId !== session.id) continue
       for (const g of byId.get(set.exerciseId)?.muscleGroups ?? []) groups.add(g)
-      if (set.coreAfter) {
-        const core = mainMuscleGroup(byId.get(entries.get(set.exerciseId)?.coreExerciseId))
-        if (core) groups.add(core)
-      }
+      if (set.coreAfter) groups.add('core') // el core de los descansos, también los lumbares, cuenta como core
     }
     for (const g of groups) counts[g] = (counts[g] ?? 0) + 1
   }

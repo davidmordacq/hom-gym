@@ -205,7 +205,7 @@ describe('seedTemplatesIfNeeded (sesiones de partida)', () => {
     const upper = await get(db, 'templates', 'tpl-upper')
     expect(upper.items.map((i) => i.exerciseId)).not.toContain('push-up')
     expect(upper.items.every((i) => i.coreExerciseId !== 'dead-bug')).toBe(true)
-    expect(upper.items.find((i) => i.exerciseId === 'assisted-pull-up').coreExerciseId).toBeNull()
+    expect(upper.items.find((i) => i.exerciseId === 'assisted-pull-up').coreExerciseId).toBe('random') // el core aleatorio no depende de un ejercicio concreto
   })
 
   it('sin ejercicios no crea sesiones vacías', async () => {

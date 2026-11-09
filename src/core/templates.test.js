@@ -17,7 +17,7 @@ describe('las sesiones de partida', () => {
     for (const template of DEFAULT_TEMPLATES) {
       for (const item of template.items) {
         expect(ids.has(item.exerciseId), item.exerciseId).toBe(true)
-        if (item.coreExerciseId) expect(ids.has(item.coreExerciseId), item.coreExerciseId).toBe(true)
+        if (item.coreExerciseId && item.coreExerciseId !== 'random') expect(ids.has(item.coreExerciseId), item.coreExerciseId).toBe(true)
       }
     }
   })

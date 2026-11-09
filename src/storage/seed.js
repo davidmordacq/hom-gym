@@ -5,6 +5,7 @@ import {
   DEFAULT_GOALS, DEFAULT_SCALES, DEFAULT_TEMPLATES, DEFAULT_WEEK_PLAN, SCALE_LEVEL_ADDITIONS,
 } from '../core/defaultData.js'
 import { DEFAULT_EXERCISES, ORIGINAL_LIBRARY_IDS } from '../core/exerciseLibrary.js'
+import { RANDOM_CORE } from '../core/model.js'
 import { DEFAULT_PROGRESSION_RULES } from '../core/progressionConfig.js'
 import { getAll, getSetting, writeAll } from './db.js'
 
@@ -91,6 +92,27 @@ export async function seedScaleLevelsIfNeeded(db) {
 }
 
 /**
+ * Pasa las sesiones de partida (Tren superior e inferior) del core fijo de cada ejercicio al core aleatorio, una sola
+ * vez por dispositivo (ajuste "coreRandomMigrated"): David pidió que el core de los descansos cambie al azar también entre
+ * series del mismo ejercicio. Los ejercicios con descanso puro se quedan como están. Las sesiones propias no se tocan, y
+ * lo que cambie David después no se vuelve a cambiar. Ejecutar DESPUÉS de seedTemplatesIfNeeded.
+ * Devuelve true si cambió alguna sesión.
+ */
+export async function migrateCoreToRandomIfNeeded(db) {
+  if (await getSetting(db, 'coreRandomMigrated', false)) return false
+  const templates = (await getAll(db, 'templates')).filter((t) => DEFAULT_TEMPLATES.some((d) => d.id === t.id))
+  const changed = []
+  for (const template of templates) {
+    const items = template.items.map((item) =>
+      item.coreExerciseId && item.coreExerciseId !== RANDOM_CORE ? { ...item, coreExerciseId: RANDOM_CORE } : item,
+    )
+    if (items.some((item, i) => item !== template.items[i])) changed.push({ ...template, items })
+  }
+  await writeAll(db, { templates: changed, settings: [{ key: 'coreRandomMigrated', value: true }] })
+  return changed.length > 0
+}
+
+/**
  * Carga las sesiones de fuerza de partida (tren superior e inferior) la primera vez.
  * Se hace UNA sola vez por dispositivo (ajuste "templatesSeeded"): si luego las cambias o las borras, no vuelven.
  * Quita de ellas los ejercicios que no existan en este dispositivo. Ejecutar DESPUÉS de seedLibraryIfNeeded.
@@ -108,7 +130,10 @@ export async function seedTemplatesIfNeeded(db) {
       ...template,
       items: template.items
         .filter((item) => haveExercises.has(item.exerciseId))
-        .map((item) => ({ ...item, coreExerciseId: haveExercises.has(item.coreExerciseId) ? item.coreExerciseId : null })),
+        .map((item) => ({
+          ...item,
+          coreExerciseId: item.coreExerciseId === RANDOM_CORE || haveExercises.has(item.coreExerciseId) ? item.coreExerciseId : null,
+        })),
     }))
     .filter((template) => template.items.length > 0)
 

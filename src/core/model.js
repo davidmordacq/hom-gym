@@ -25,6 +25,12 @@ export const EXERCISE_UNITS = Object.freeze({
   SECONDS: 'seconds',
 })
 
+/**
+ * Valor especial del core de un descanso: en vez de un ejercicio fijo, la app elige uno distinto al azar en cada descanso
+ * entre los del conjunto que David configura en Ajustes.
+ */
+export const RANDOM_CORE = 'random'
+
 /** Tipos de sesión que caben en un día. Un día puede tener varias. */
 export const SESSION_TYPES = Object.freeze({
   STRENGTH: 'strength',

@@ -141,7 +141,7 @@ export default function History({ db, sessions, exercises, scales, onChanged }) 
               <section className="card" key={item.exerciseId}>
                 <p className="card-title">{item.name}</p>
                 {item.sets.length === 0 ? (
-                  <p className="muted small">Sin series.</p>
+                  <p className="muted small">{item.skipped ? 'Saltado.' : 'Sin series.'}</p>
                 ) : (
                   <ul className="summary-list">
                     {item.sets.map((set) => (
@@ -149,7 +149,7 @@ export default function History({ db, sessions, exercises, scales, onChanged }) 
                         <span>
                           Serie {set.order}: <strong>{set.reps}</strong> {item.unit === 'seconds' ? 's' : 'rep.'}
                           {set.levelId && exercise ? ` · ${findLevel(exercise, scale, set.levelId)?.label ?? set.levelId}` : ''}
-                          {set.coreAfter ? ' · core ✓' : ''}
+                          {set.coreAfter ? ` · core ✓${byExercise.get(set.coreExerciseId) ? ` ${byExercise.get(set.coreExerciseId).name}` : ''}` : ''}
                         </span>
                       </li>
                     ))}

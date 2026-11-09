@@ -30,7 +30,7 @@ describe('startStrengthSession', () => {
     copy.items[0].sets = 9
     copy.items.pop()
     expect(s.exercises).toHaveLength(upper.items.length)
-    expect(s.exercises[0]).toMatchObject({ exerciseId: 'assisted-pull-up', targetSets: 3, coreExerciseId: 'dead-bug' })
+    expect(s.exercises[0]).toMatchObject({ exerciseId: 'assisted-pull-up', targetSets: 3, coreExerciseId: 'random' })
   })
 
   it('la fecha es la del día local en que empieza, y puede venir de un hueco del plan', () => {

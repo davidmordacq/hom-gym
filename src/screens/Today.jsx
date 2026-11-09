@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { toIsoDate, weekdayOf } from '../core/dates.js'
 import { weekProgress } from '../core/history.js'
-import { SESSION_STATUS, SESSION_TYPES } from '../core/model.js'
+import { RANDOM_CORE, SESSION_STATUS, SESSION_TYPES } from '../core/model.js'
 import { estimateMinutes, itemTargetText, minutesText, sortTemplates, suggestNextTemplateId } from '../core/templates.js'
 import { durationMinutes, QUICK_TYPES, startMobilitySession, startStrengthSession } from '../core/workout.js'
 import { backupStatus, backupText, snoozeUntil } from '../core/backupStatus.js'
@@ -58,7 +58,9 @@ function StrengthCard({ slot, templates, exercises, sessions, rules, restSeconds
                 <li key={item.exerciseId}>
                   <span className="exercise-name">{exercise?.name ?? 'Ejercicio que ya no existe'}</span>
                   <span className="muted small">{itemTargetText(item, exercise, rules)}</span>
-                  <span className="muted small">{core ? `Descanso con core: ${core.name}` : 'Descanso puro'}</span>
+                  <span className="muted small">
+                    {item.coreExerciseId === RANDOM_CORE ? 'Descanso con core al azar' : core ? `Descanso con core: ${core.name}` : 'Descanso puro'}
+                  </span>
                 </li>
               )
             })}

@@ -5,7 +5,10 @@ import { syncIntervals } from './storage/intervalsSync.js'
 import { getAll, getSetting, openDb } from './storage/db.js'
 import { DEFAULT_GOALS } from './core/defaultData.js'
 import { DEFAULT_REST_SECONDS } from './core/templates.js'
-import { seedIfNeeded, seedLibraryIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded } from './storage/seed.js'
+import {
+  migrateCoreToRandomIfNeeded, seedIfNeeded, seedLibraryIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded,
+} from './storage/seed.js'
+import { CORE_REST_POOL_IDS } from './core/exerciseLibrary.js'
 import { applyTheme } from './theme.js'
 import { CalendarIcon, ChartIcon, DumbbellIcon, HistoryIcon, HomeIcon, SlidersIcon } from './ui/icons.jsx'
 import Exercises from './screens/Exercises.jsx'
@@ -42,7 +45,8 @@ async function loadAppData(db) {
   await seedLibraryIfNeeded(db)
   await seedScaleLevelsIfNeeded(db)
   await seedTemplatesIfNeeded(db)
-  const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds, installedAt, lastBackupAt, backupSnoozedUntil, intervalsKey, intervalsLastSyncAt, intervalsLastResult] = await Promise.all([
+  await migrateCoreToRandomIfNeeded(db)
+  const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds, installedAt, lastBackupAt, backupSnoozedUntil, intervalsKey, intervalsLastSyncAt, intervalsLastResult, storedCorePool] = await Promise.all([
     getAll(db, 'plan'),
     getSetting(db, 'theme', 'dark'),
     getAll(db, 'exercises'),
@@ -58,6 +62,7 @@ async function loadAppData(db) {
     getSetting(db, 'intervalsApiKey', null),
     getSetting(db, 'intervalsLastSyncAt', null),
     getSetting(db, 'intervalsLastResult', null),
+    getSetting(db, 'corePool', null),
   ])
   applyTheme(theme)
   // Si las reglas guardadas estuvieran dañadas, se usan las de fábrica en vez de romper la app.
@@ -74,6 +79,8 @@ async function loadAppData(db) {
     installedAt,
     lastBackupAt,
     backupSnoozedUntil,
+    // Conjunto de core para los descansos: el que David haya marcado en Ajustes o, si no ha tocado nada, el de partida.
+    corePool: Array.isArray(storedCorePool) ? storedCorePool : [...CORE_REST_POOL_IDS],
     // La clave en sí no sale de la base de datos: la pantalla solo sabe si está conectado.
     intervals: { connected: Boolean(intervalsKey), lastSyncAt: intervalsLastSyncAt, lastResult: intervalsLastResult },
   }
@@ -162,6 +169,7 @@ export default function App() {
             scales={state.scales}
             rules={state.rules}
             restSeconds={state.restSeconds}
+            corePool={state.corePool}
             sessions={state.sessions}
             onExit={exit}
             onChanged={reload}
@@ -229,6 +237,8 @@ export default function App() {
             rules={state.rules}
             lastBackupAt={state.lastBackupAt}
             intervals={state.intervals}
+            exercises={state.exercises}
+            corePool={state.corePool}
             onChanged={reload}
           />
         )}

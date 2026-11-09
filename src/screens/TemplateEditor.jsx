@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { groupExercises, isArchived, searchExercises } from '../core/exercises.js'
+import { RANDOM_CORE } from '../core/model.js'
 import {
   MAX_SESSION_MINUTES, MAX_SETS_PER_EXERCISE, blankItem, estimateMinutes, itemTargetText, minutesText, moveItem,
   validateTemplate,
@@ -149,9 +150,10 @@ export default function TemplateEditor({ initial, templates, exercises, rules, r
               <span className="field-label">En el descanso</span>
               <select value={item.coreExerciseId ?? ''} onChange={(e) => changeItem(index, { coreExerciseId: e.target.value || null })}>
                 <option value="">Descanso puro</option>
+                <option value={RANDOM_CORE}>Core distinto al azar en cada descanso</option>
                 {coreChoices.map((core) => (
                   <option key={core.id} value={core.id}>
-                    Core: {core.name}
+                    Siempre: {core.name}
                   </option>
                 ))}
               </select>

@@ -420,4 +420,55 @@ export const DEFAULT_EXERCISES = [
     videoChannel: 'DrVíctorLópez',
     notes: 'Tumbado, sube las rodillas hacia el pecho levantando un poco la pelvis. Sin balanceo.',
   },
+  // ---- Core y lumbares para los descansos (añadidos después de la 1b) ----
+  {
+    id: 'russian-twist',
+    name: 'Russian twists (giros rusos)',
+    muscleGroups: ['core'],
+    resistanceType: R,
+    scaleId: 'kg',
+    videoUrl: watch('hdSyLWfRJHc'),
+    videoChannel: 'Deportika Online',
+    notes: 'Sentado con el torso inclinado hacia atrás y la espalda recta, gira el tronco de un lado a otro. Más difícil con los pies en el aire o sujetando el saco.',
+  },
+  {
+    id: 'leg-circles',
+    name: 'Around the world (círculos con las piernas)',
+    muscleGroups: ['core'],
+    resistanceType: R,
+    scaleId: null,
+    videoUrl: watch('z2hhOgGjwd4'),
+    videoChannel: 'Lo de Noel UY by Noel Antoine',
+    notes: 'Tumbado boca arriba con la zona lumbar pegada al suelo, levanta las piernas estiradas y dibuja círculos con ellas, juntas. Más fácil con círculos pequeños.',
+  },
+  {
+    id: 'swimmer',
+    name: 'Nadador (swimmer)',
+    muscleGroups: ['back', 'glutes'],
+    resistanceType: R,
+    scaleId: null,
+    videoUrl: watch('XwugiIe09rQ'),
+    videoChannel: 'Ampelusinha',
+    notes: 'Tumbado boca abajo, eleva brazos y piernas y alterna brazo derecho con pierna izquierda y al revés, con movimientos cortos y controlados. Trabaja lumbares y glúteos.',
+  },
+  {
+    id: 'prone-trunk-raise',
+    name: 'Elevación de tronco boca abajo (lumbares)',
+    muscleGroups: ['back'],
+    resistanceType: R,
+    scaleId: null,
+    videoUrl: watch('35srtXJE1Cg'),
+    videoChannel: 'JMF-PersonalTrainer',
+    notes: 'Tumbado boca abajo con las manos junto a la cabeza, sube el pecho con suavidad sin forzar el cuello, aguanta un segundo y baja con control.',
+  },
 ]
+
+/**
+ * Ejercicios de core y lumbares entre los que la app elige al azar el que toca hacer en cada descanso (David puede
+ * cambiar el conjunto en Ajustes). Las planchas quedan fuera por defecto: cargan los hombros justo entre series de
+ * dominadas y flexiones; se pueden añadir.
+ */
+export const CORE_REST_POOL_IDS = Object.freeze([
+  'dead-bug', 'bird-dog', 'reverse-crunch', 'leg-raise', 'crunch', 'russian-twist', 'leg-circles', 'superman', 'swimmer',
+  'prone-trunk-raise',
+])

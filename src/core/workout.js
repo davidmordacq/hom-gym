@@ -3,7 +3,7 @@
 
 import { toIsoDate } from './dates.js'
 import { levelsEasyToHard } from './exercises.js'
-import { EXERCISE_UNITS, SESSION_STATUS, SESSION_TYPES } from './model.js'
+import { EXERCISE_UNITS, RANDOM_CORE, SESSION_STATUS, SESSION_TYPES } from './model.js'
 import { DEFAULT_PROGRESSION_RULES, getRulesForExercise } from './progressionConfig.js'
 import { findLevel } from './resistance.js'
 
@@ -32,6 +32,8 @@ export function startStrengthSession({ template, slotId = null, now = new Date()
     endedAt: null,
     cursor: 0,
     notes: '',
+    coreBag: [], // core que quedan por salir en esta sesión (se rellena sola al agotarse)
+    lastCoreId: null, // el último core propuesto, para no repetirlo dos descansos seguidos
     exercises: template.items.map((item, i) => ({
       exerciseId: item.exerciseId,
       targetSets: item.sets,
@@ -107,9 +109,67 @@ export function touchExercise(session, exerciseId, now = new Date()) {
   return {
     ...session,
     exercises: session.exercises.map((entry) =>
-      entry.exerciseId === exerciseId ? { ...entry, startedAt: entry.startedAt ?? now.toISOString(), endedAt: now.toISOString() } : entry,
+      entry.exerciseId === exerciseId
+        ? { ...entry, skipped: false, startedAt: entry.startedAt ?? now.toISOString(), endedAt: now.toISOString() }
+        : entry,
     ),
   }
+}
+
+/** Salta la serie que toca: el ejercicio pasa a tener una serie menos (nunca menos de las ya hechas). */
+export function skipNextSet(session, exerciseId, doneCount) {
+  return {
+    ...session,
+    exercises: session.exercises.map((entry) =>
+      entry.exerciseId === exerciseId ? { ...entry, targetSets: Math.max(doneCount, entry.targetSets - 1) } : entry,
+    ),
+  }
+}
+
+/** Marca un ejercicio como saltado (se ve en el resumen). Si luego se hace alguna serie, deja de estarlo. */
+export function skipExercise(session, exerciseId) {
+  return { ...session, exercises: session.exercises.map((entry) => (entry.exerciseId === exerciseId ? { ...entry, skipped: true } : entry)) }
+}
+
+// ---- Core aleatorio en los descansos --------------------------------------------------------------
+
+/** Mezcla una lista (Fisher-Yates). `random` permite probarlo con números fijos. */
+export function shuffle(list, random = Math.random) {
+  const copy = [...list]
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1))
+    ;[copy[i], copy[j]] = [copy[j], copy[i]]
+  }
+  return copy
+}
+
+/**
+ * Elige el siguiente ejercicio de core de una "bolsa": se mezclan los del conjunto y se van sacando uno a uno, así salen
+ * todos antes de que se repita ninguno y nunca el mismo dos descansos seguidos. Cuando la bolsa se vacía, se vuelve a
+ * llenar. Devuelve { id, bag }; id es null si el conjunto está vacío.
+ */
+export function drawCore({ bag = [], pool, lastId = null, random = Math.random }) {
+  const valid = [...new Set(pool)]
+  if (valid.length === 0) return { id: null, bag: [] }
+  let next = bag.filter((id) => valid.includes(id))
+  if (next.length === 0) {
+    next = shuffle(valid, random)
+    if (next.length > 1 && next[0] === lastId) {
+      const swapWith = 1 + Math.floor(random() * (next.length - 1))
+      ;[next[0], next[swapWith]] = [next[swapWith], next[0]]
+    }
+  }
+  return { id: next[0], bag: next.slice(1) }
+}
+
+/**
+ * El core del descanso que sigue a una serie, según lo que tenga configurado el ejercicio: ninguno (descanso puro),
+ * uno fijo o uno al azar del conjunto. Devuelve { id, bag } con la bolsa actualizada.
+ */
+export function chooseCore({ mode, pool, bag = [], lastId = null, random = Math.random }) {
+  if (!mode) return { id: null, bag }
+  if (mode !== RANDOM_CORE) return { id: mode, bag }
+  return drawCore({ bag, pool, lastId, random })
 }
 
 /** Una serie más en este ejercicio. */
@@ -130,7 +190,7 @@ export function finishSession(session, { notes = session.notes, now = new Date()
 }
 
 /** Serie lista para guardar. */
-export function buildSet({ session, exerciseId, order, reps, levelId, coreAfter = false, now = new Date() }) {
+export function buildSet({ session, exerciseId, order, reps, levelId, coreAfter = false, coreExerciseId = null, now = new Date() }) {
   return {
     id: setId(session.id, exerciseId, order),
     sessionId: session.id,
@@ -141,6 +201,7 @@ export function buildSet({ session, exerciseId, order, reps, levelId, coreAfter 
     levelId: levelId ?? null,
     completedAt: now.toISOString(),
     coreAfter: Boolean(coreAfter),
+    coreExerciseId, // el core propuesto para el descanso que sigue a esta serie (puede cambiar con "otro")
   }
 }
 
@@ -242,6 +303,7 @@ export function sessionSummary(session, sets, exercises, now = new Date()) {
       exerciseId: entry.exerciseId,
       name: exercise?.name ?? 'Ejercicio que ya no existe',
       unit: exercise?.unit ?? EXERCISE_UNITS.REPS,
+      skipped: Boolean(entry.skipped) && logged.length === 0,
       sets: logged,
     }
   })
