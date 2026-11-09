@@ -6,7 +6,8 @@ import { getAll, getSetting, openDb } from './storage/db.js'
 import { DEFAULT_GOALS } from './core/defaultData.js'
 import { DEFAULT_REST_SECONDS } from './core/templates.js'
 import {
-  migrateCoreToRandomIfNeeded, seedIfNeeded, seedLibraryIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded,
+  migrateCoreToRandomIfNeeded, seedIfNeeded, seedLibraryIfNeeded, seedPlanksInCorePoolIfNeeded, seedScaleLevelsIfNeeded,
+  seedTemplatesIfNeeded,
 } from './storage/seed.js'
 import { CORE_REST_POOL_IDS } from './core/exerciseLibrary.js'
 import { applyTheme } from './theme.js'
@@ -46,6 +47,7 @@ async function loadAppData(db) {
   await seedScaleLevelsIfNeeded(db)
   await seedTemplatesIfNeeded(db)
   await migrateCoreToRandomIfNeeded(db)
+  await seedPlanksInCorePoolIfNeeded(db)
   const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds, installedAt, lastBackupAt, backupSnoozedUntil, intervalsKey, intervalsLastSyncAt, intervalsLastResult, storedCorePool] = await Promise.all([
     getAll(db, 'plan'),
     getSetting(db, 'theme', 'dark'),

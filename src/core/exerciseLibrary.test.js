@@ -101,14 +101,14 @@ describe('core y lumbares para los descansos', () => {
       expect(ORIGINAL_LIBRARY_IDS).not.toContain(id)
     }
   })
-  it('todos los del conjunto por defecto existen y trabajan el core o los lumbares, sin planchas', () => {
+  it('todos los del conjunto por defecto existen y trabajan el core o los lumbares, con las dos planchas', () => {
     for (const id of CORE_REST_POOL_IDS) {
       const e = byId.get(id)
       expect(e, id).toBeDefined()
       expect(e.muscleGroups.some((g) => g === 'core' || g === 'back'), id).toBe(true)
     }
-    expect(CORE_REST_POOL_IDS).not.toContain('plank')
-    expect(CORE_REST_POOL_IDS).not.toContain('side-plank')
+    expect(CORE_REST_POOL_IDS).toContain('plank')
+    expect(CORE_REST_POOL_IDS).toContain('side-plank')
     expect(new Set(CORE_REST_POOL_IDS).size).toBe(CORE_REST_POOL_IDS.length)
     expect(CORE_REST_POOL_IDS.length).toBeGreaterThanOrEqual(8)
   })

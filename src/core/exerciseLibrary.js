@@ -465,10 +465,20 @@ export const DEFAULT_EXERCISES = [
 
 /**
  * Ejercicios de core y lumbares entre los que la app elige al azar el que toca hacer en cada descanso (David puede
- * cambiar el conjunto en Ajustes). Las planchas quedan fuera por defecto: cargan los hombros justo entre series de
- * dominadas y flexiones; se pueden añadir.
+ * cambiar el conjunto en Ajustes). Incluye las dos planchas, con una restricción: nunca salen en el descanso de un
+ * ejercicio de espalda (dominadas), ver `CORE_REST_NOT_AFTER`.
  */
 export const CORE_REST_POOL_IDS = Object.freeze([
   'dead-bug', 'bird-dog', 'reverse-crunch', 'leg-raise', 'crunch', 'russian-twist', 'leg-circles', 'superman', 'swimmer',
-  'prone-trunk-raise',
+  'prone-trunk-raise', 'plank', 'side-plank',
 ])
+
+/**
+ * Ejercicios de core que NO deben tocar en el descanso de un ejercicio según su músculo principal (decisión de David,
+ * 2026-11-09): las planchas, sobre todo la lateral, trabajan algo los dorsales y los hombros y podrían restar fuerza
+ * en la siguiente serie de dominadas. Para ampliarlo (por ejemplo, a las flexiones) basta añadir 'chest' o 'shoulders'.
+ */
+export const CORE_REST_NOT_AFTER = Object.freeze({
+  plank: Object.freeze(['back']),
+  'side-plank': Object.freeze(['back']),
+})

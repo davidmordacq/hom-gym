@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { sessionStats } from './analysis.js'
 import { DEFAULT_TEMPLATES } from './defaultData.js'
-import { DEFAULT_EXERCISES } from './exerciseLibrary.js'
+import { CORE_REST_POOL_IDS, DEFAULT_EXERCISES } from './exerciseLibrary.js'
 import { validateTemplate, weeklyGroupFrequency } from './templates.js'
 import {
-  buildSet, chooseCore, drawCore, sessionSummary, shuffle, skipExercise, skipNextSet, startStrengthSession, touchExercise,
+  buildSet, chooseCore, coreAvoidFor, drawCore, sessionSummary, shuffle, skipExercise, skipNextSet, startStrengthSession, touchExercise,
 } from './workout.js'
 
 const exercises = DEFAULT_EXERCISES
@@ -118,6 +118,82 @@ describe('core aleatorio en los descansos', () => {
     const random = chooseCore({ mode: 'random', pool, random: seededRandom(4) })
     expect(pool).toContain(random.id)
     expect(random.bag).toHaveLength(4)
+  })
+
+  it('avoid: lo que hay que evitar no sale, pero se queda en la bolsa para otro descanso', () => {
+    const draw = drawCore({ bag: ['p', 'a', 'b'], pool: ['a', 'b', 'p'], avoid: ['p'], random: seededRandom(1) })
+    expect(draw.id).toBe('a')
+    expect(draw.bag).toEqual(['p', 'b'])
+    // sin nada que evitar, sale el primero de la bolsa como siempre
+    expect(drawCore({ bag: ['p', 'a'], pool: ['a', 'p'] }).id).toBe('p')
+  })
+
+  it('avoid: si la bolsa solo tiene lo que se evita, se rellena con lo demás y lo evitado sigue pendiente', () => {
+    const draw = drawCore({ bag: ['p'], pool: ['a', 'b', 'p'], avoid: ['p'], random: seededRandom(1) })
+    expect(['a', 'b']).toContain(draw.id)
+    expect(draw.bag).toContain('p')
+    expect(draw.bag).toHaveLength(2)
+    expect(drawCore({ bag: ['p'], pool: ['a', 'b', 'p'], avoid: ['p'], lastId: 'a', random: seededRandom(2) }).id).toBe('b')
+  })
+
+  it('avoid: si todo el conjunto se evita no sale nada (descanso puro) y la bolsa se conserva', () => {
+    expect(drawCore({ bag: ['p'], pool: ['p', 'q'], avoid: ['p', 'q'] })).toEqual({ id: null, bag: ['p'] })
+  })
+
+  it('avoid: nunca sale lo evitado en 300 descansos, y fuera de esos descansos sí sale', () => {
+    const random = seededRandom(9)
+    let bag = []
+    let last = null
+    let planksElsewhere = 0
+    for (let i = 0; i < 300; i++) {
+      const afterPullUp = i % 2 === 0
+      const draw = drawCore({ bag, pool: ['a', 'b', 'c', 'plank'], lastId: last, avoid: afterPullUp ? ['plank'] : [], random })
+      if (afterPullUp) expect(draw.id).not.toBe('plank')
+      else if (draw.id === 'plank') planksElsewhere += 1
+      expect(draw.id).not.toBe(last)
+      bag = draw.bag
+      last = draw.id
+    }
+    expect(planksElsewhere).toBeGreaterThan(20)
+  })
+
+  it('las planchas no salen en el descanso de dominadas ni de dominadas supinas, pero sí en el de otros ejercicios', () => {
+    const byId = new Map(exercises.map((e) => [e.id, e]))
+    for (const id of ['assisted-pull-up', 'assisted-chin-up']) expect(coreAvoidFor(byId.get(id)).sort(), id).toEqual(['plank', 'side-plank'])
+    for (const id of ['push-up', 'close-push-up', 'banded-lateral-raise', 'banded-front-raise', 'bulgarian-split-squat', 'single-leg-rdl', 'goblet-squat']) {
+      expect(coreAvoidFor(byId.get(id)), id).toEqual([])
+    }
+    expect(coreAvoidFor(null)).toEqual([])
+    expect(coreAvoidFor({ id: 'x', muscleGroups: [] })).toEqual([])
+  })
+
+  it('en una sesión de tren superior entera, con el conjunto por defecto, ninguna plancha cae tras unas dominadas', () => {
+    const byId = new Map(exercises.map((e) => [e.id, e]))
+    for (let seed = 1; seed <= 100; seed++) {
+      const random = seededRandom(seed)
+      let bag = []
+      let last = null
+      for (let round = 0; round < 3; round++) {
+        for (const item of upper.items) {
+          for (let n = 0; n < item.sets; n++) {
+            const draw = chooseCore({
+              mode: item.coreExerciseId,
+              pool: CORE_REST_POOL_IDS,
+              bag,
+              lastId: last,
+              avoid: coreAvoidFor(byId.get(item.exerciseId)),
+              random,
+            })
+            if (!draw.id) continue
+            if (item.exerciseId.includes('pull-up') || item.exerciseId.includes('chin-up')) {
+              expect(['plank', 'side-plank'], `semilla ${seed}`).not.toContain(draw.id)
+            }
+            bag = draw.bag
+            last = draw.id
+          }
+        }
+      }
+    }
   })
 
   it('la sesión empieza con la bolsa vacía y la serie guarda qué core se propuso', () => {

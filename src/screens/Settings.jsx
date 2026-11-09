@@ -206,7 +206,10 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, las
               : 'Con un solo ejercicio marcado, el core no podrá cambiar entre descansos.'}
           </p>
         )}
-        <p className="muted small">Las planchas no están marcadas de partida porque cargan los hombros entre series de dominadas y flexiones; puedes añadirlas.</p>
+        <p className="muted small">
+          Las planchas (frontal y lateral) salen en los descansos de todos los ejercicios menos en los de espalda (dominadas), porque
+          trabajan algo los dorsales y los hombros y podrían restarte fuerza en la siguiente serie.
+        </p>
       </section>
 
       <form className="card" onSubmit={saveGoal} noValidate>

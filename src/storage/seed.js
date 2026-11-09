@@ -113,6 +113,26 @@ export async function migrateCoreToRandomIfNeeded(db) {
 }
 
 /**
+ * Añade las dos planchas al conjunto de core de los descansos que David ya tuviera guardado (una sola vez; ajuste
+ * "corePoolPlanksOffered"). Si nunca tocó el conjunto, ya incluye las planchas por defecto y solo se apunta la marca.
+ * Después puede quitarlas en Ajustes sin que vuelvan. Devuelve true si cambió el conjunto guardado.
+ */
+export async function seedPlanksInCorePoolIfNeeded(db) {
+  if (await getSetting(db, 'corePoolPlanksOffered', false)) return false
+  const stored = await getSetting(db, 'corePool', null)
+  const settings = [{ key: 'corePoolPlanksOffered', value: true }]
+  let changed = false
+  if (Array.isArray(stored)) {
+    const next = [...stored]
+    for (const id of ['plank', 'side-plank']) if (!next.includes(id)) next.push(id)
+    changed = next.length !== stored.length
+    if (changed) settings.push({ key: 'corePool', value: next })
+  }
+  await writeAll(db, { settings })
+  return changed
+}
+
+/**
  * Carga las sesiones de fuerza de partida (tren superior e inferior) la primera vez.
  * Se hace UNA sola vez por dispositivo (ajuste "templatesSeeded"): si luego las cambias o las borras, no vuelven.
  * Quita de ellas los ejercicios que no existan en este dispositivo. Ejecutar DESPUÉS de seedLibraryIfNeeded.

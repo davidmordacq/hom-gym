@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SCALES } from '../core/defaultData.js'
 import { DEFAULT_EXERCISES, ORIGINAL_LIBRARY_IDS } from '../core/exerciseLibrary.js'
 import { get, getAll, getSetting, openDb, put, putMany, remove, replaceAll } from './db.js'
-import { seedIfNeeded, seedLibraryIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded } from './seed.js'
+import {
+  seedIfNeeded, seedLibraryIfNeeded, seedPlanksInCorePoolIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded,
+} from './seed.js'
 
 let db
 let counter = 0
@@ -218,6 +220,34 @@ describe('seedTemplatesIfNeeded (sesiones de partida)', () => {
     await put(db, 'templates', { id: 'tpl-upper', name: 'Mía', order: 1, items: [] })
     await seedTemplatesIfNeeded(db)
     expect((await get(db, 'templates', 'tpl-upper')).name).toBe('Mía')
+  })
+})
+
+describe('seedPlanksInCorePoolIfNeeded (planchas en el core de los descansos)', () => {
+  it('si David ya había tocado el conjunto, añade las dos planchas una vez y respeta el resto', async () => {
+    await put(db, 'settings', { key: 'corePool', value: ['dead-bug', 'superman'] })
+    expect(await seedPlanksInCorePoolIfNeeded(db)).toBe(true)
+    expect(await getSetting(db, 'corePool', null)).toEqual(['dead-bug', 'superman', 'plank', 'side-plank'])
+  })
+
+  it('solo una vez: si luego las quita, no vuelven', async () => {
+    await put(db, 'settings', { key: 'corePool', value: ['dead-bug'] })
+    await seedPlanksInCorePoolIfNeeded(db)
+    await put(db, 'settings', { key: 'corePool', value: ['dead-bug', 'superman'] })
+    expect(await seedPlanksInCorePoolIfNeeded(db)).toBe(false)
+    expect(await getSetting(db, 'corePool', null)).toEqual(['dead-bug', 'superman'])
+  })
+
+  it('si nunca tocó el conjunto no lo guarda (ya incluye las planchas por defecto) y solo apunta la marca', async () => {
+    expect(await seedPlanksInCorePoolIfNeeded(db)).toBe(false)
+    expect(await getSetting(db, 'corePool', null)).toBeNull()
+    expect(await getSetting(db, 'corePoolPlanksOffered', false)).toBe(true)
+  })
+
+  it('no duplica una plancha que ya estuviera marcada', async () => {
+    await put(db, 'settings', { key: 'corePool', value: ['plank', 'dead-bug'] })
+    await seedPlanksInCorePoolIfNeeded(db)
+    expect(await getSetting(db, 'corePool', null)).toEqual(['plank', 'dead-bug', 'side-plank'])
   })
 })
 

@@ -4,7 +4,7 @@ import { findLevel } from '../core/resistance.js'
 import { itemTargetText } from '../core/templates.js'
 import { parseYoutubeId } from '../core/youtube.js'
 import {
-  WARNING_SECONDS, addSetToExercise, buildSet, chooseCore, defaultLevelId, defaultReps, drawCore, durationMinutes, finishSession,
+  WARNING_SECONDS, addSetToExercise, buildSet, chooseCore, coreAvoidFor, defaultLevelId, defaultReps, drawCore, durationMinutes, finishSession,
   formatClock, goToExercise, lastPerformance, lastPerformanceText, repStep, sessionSummary, setExerciseNotes, skipExercise,
   skipNextSet, touchExercise,
 } from '../core/workout.js'
@@ -240,7 +240,13 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
     setError(null)
     const now = new Date()
     // El core del descanso que sigue a esta serie: ninguno, uno fijo o uno distinto al azar (sin repetir seguidos).
-    const draw = chooseCore({ mode: entry.coreExerciseId, pool: validPool, bag: session.coreBag ?? [], lastId: session.lastCoreId ?? null })
+    const draw = chooseCore({
+      mode: entry.coreExerciseId,
+      pool: validPool,
+      bag: session.coreBag ?? [],
+      lastId: session.lastCoreId ?? null,
+      avoid: coreAvoidFor(exercise), // las planchas no salen tras dominadas
+    })
     const set = buildSet({ session, exerciseId: entry.exerciseId, order: activeOrder, reps: value, levelId: level, coreExerciseId: draw.id, now })
     try {
       await saveSet(db, set)
@@ -312,7 +318,13 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
 
   // "Otro": si no apetece el core que ha salido, se saca otro de la bolsa (el anterior vuelve a quedar disponible).
   async function rerollCore() {
-    const draw = drawCore({ bag: session.coreBag ?? [], pool: validPool, lastId: restSet.coreExerciseId })
+    const draw = drawCore({
+      bag: session.coreBag ?? [],
+      pool: validPool,
+      lastId: restSet.coreExerciseId,
+      avoid: coreAvoidFor(byExercise.get(rest.exerciseId)),
+    })
+    if (!draw.id) return // no hay otro que pueda salir ahora
     const updated = { ...restSet, coreExerciseId: draw.id }
     try {
       await saveSet(db, updated)
@@ -549,6 +561,9 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
                 </button>
               )}
             </div>
+          )}
+          {restCore?.unit === EXERCISE_UNITS.SECONDS && restPhase !== 'done' && (
+            <span className="muted small">Aguanta unos 30-40 s (la lateral, unos 20 s de cada lado).</span>
           )}
           {!restCore && restPhase !== 'done' && <span className="muted small">Descanso puro</span>}
           <button

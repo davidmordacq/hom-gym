@@ -2,7 +2,8 @@
 // Solo lógica, sin pantallas.
 
 import { toIsoDate } from './dates.js'
-import { levelsEasyToHard } from './exercises.js'
+import { CORE_REST_NOT_AFTER } from './exerciseLibrary.js'
+import { levelsEasyToHard, mainMuscleGroup } from './exercises.js'
 import { EXERCISE_UNITS, RANDOM_CORE, SESSION_STATUS, SESSION_TYPES } from './model.js'
 import { DEFAULT_PROGRESSION_RULES, getRulesForExercise } from './progressionConfig.js'
 import { findLevel } from './resistance.js'
@@ -148,28 +149,43 @@ export function shuffle(list, random = Math.random) {
  * todos antes de que se repita ninguno y nunca el mismo dos descansos seguidos. Cuando la bolsa se vacía, se vuelve a
  * llenar. Devuelve { id, bag }; id es null si el conjunto está vacío.
  */
-export function drawCore({ bag = [], pool, lastId = null, random = Math.random }) {
-  const valid = [...new Set(pool)]
-  if (valid.length === 0) return { id: null, bag: [] }
-  let next = bag.filter((id) => valid.includes(id))
-  if (next.length === 0) {
-    next = shuffle(valid, random)
-    if (next.length > 1 && next[0] === lastId) {
-      const swapWith = 1 + Math.floor(random() * (next.length - 1))
-      ;[next[0], next[swapWith]] = [next[swapWith], next[0]]
-    }
+export function drawCore({ bag = [], pool, lastId = null, avoid = [], random = Math.random }) {
+  const all = [...new Set(pool)]
+  if (all.length === 0) return { id: null, bag: [] }
+  const allowed = all.filter((id) => !avoid.includes(id))
+  const kept = bag.filter((id) => all.includes(id))
+  if (allowed.length === 0) return { id: null, bag: kept }
+  // Primero se aprovecha la bolsa: sale el primero que se pueda usar ahora; los que hay que evitar en este descanso
+  // (las planchas tras unas dominadas) se quedan en la bolsa para otro descanso.
+  const index = kept.findIndex((id) => allowed.includes(id))
+  if (index >= 0) return { id: kept[index], bag: kept.filter((_, i) => i !== index) }
+  const fresh = shuffle(allowed, random)
+  if (fresh.length > 1 && fresh[0] === lastId) {
+    const swapWith = 1 + Math.floor(random() * (fresh.length - 1))
+    ;[fresh[0], fresh[swapWith]] = [fresh[swapWith], fresh[0]]
   }
-  return { id: next[0], bag: next.slice(1) }
+  return { id: fresh[0], bag: [...kept, ...fresh.slice(1)] }
+}
+
+/**
+ * Ejercicios de core que no deben salir en el descanso de este ejercicio (por su músculo principal): las planchas
+ * tras las dominadas. Ver `CORE_REST_NOT_AFTER`.
+ */
+export function coreAvoidFor(exercise) {
+  const group = exercise ? mainMuscleGroup(exercise) : null
+  if (!group) return []
+  return Object.keys(CORE_REST_NOT_AFTER).filter((coreId) => CORE_REST_NOT_AFTER[coreId].includes(group))
 }
 
 /**
  * El core del descanso que sigue a una serie, según lo que tenga configurado el ejercicio: ninguno (descanso puro),
- * uno fijo o uno al azar del conjunto. Devuelve { id, bag } con la bolsa actualizada.
+ * uno fijo o uno al azar del conjunto. `avoid` son los que no deben salir ahora. Devuelve { id, bag } con la bolsa
+ * actualizada.
  */
-export function chooseCore({ mode, pool, bag = [], lastId = null, random = Math.random }) {
+export function chooseCore({ mode, pool, bag = [], lastId = null, avoid = [], random = Math.random }) {
   if (!mode) return { id: null, bag }
   if (mode !== RANDOM_CORE) return { id: mode, bag }
-  return drawCore({ bag, pool, lastId, random })
+  return drawCore({ bag, pool, lastId, avoid, random })
 }
 
 /** Una serie más en este ejercicio. */
