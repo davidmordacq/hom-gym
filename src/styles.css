@@ -1124,3 +1124,7 @@ textarea:focus-visible {
 .backup-card {
   border-color: var(--accent);
 }
+
+.mobility-paused .rest-clock {
+  color: var(--muted);
+}

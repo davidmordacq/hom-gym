@@ -63,16 +63,33 @@ export function startMobilitySession({ slot = null, now = new Date(), id = newSe
   }
 }
 
-/** Termina la sesión de movilidad: queda hecha con los minutos reales (mínimo 1). */
+/** Pone en pausa una sesión en curso (si ya estaba en pausa, no cambia nada). */
+export function pauseSession(session, now = new Date()) {
+  return session.pausedAt ? session : { ...session, pausedAt: now.toISOString() }
+}
+
+/** Sigue después de una pausa: el rato parado se suma a `pausedMs` y no cuenta como tiempo de sesión. */
+export function resumeSession(session, now = new Date()) {
+  if (!session.pausedAt) return session
+  const stopped = Math.max(0, now.getTime() - Date.parse(session.pausedAt))
+  return { ...session, pausedAt: null, pausedMs: (session.pausedMs ?? 0) + (Number.isFinite(stopped) ? stopped : 0) }
+}
+
+/** Milisegundos de sesión sin contar las pausas (la pausa en curso tampoco cuenta). */
+export function activeMillis(session, now = new Date()) {
+  const start = Date.parse(session.startedAt)
+  const end = session.endedAt ? Date.parse(session.endedAt) : now.getTime()
+  const currentPause = session.pausedAt && !session.endedAt ? Math.max(0, now.getTime() - Date.parse(session.pausedAt)) : 0
+  const total = end - start - (session.pausedMs ?? 0) - currentPause
+  return Number.isFinite(total) ? Math.max(0, total) : 0
+}
+
+/** Termina la sesión de movilidad: queda hecha con los minutos reales, sin las pausas (mínimo 1). */
 export function finishMobilitySession(session, { notes = session.notes, now = new Date() } = {}) {
+  const resumed = resumeSession(session, now) // si se termina estando en pausa, esa pausa tampoco cuenta
   const endedAt = now.toISOString()
-  return {
-    ...session,
-    status: SESSION_STATUS.DONE,
-    endedAt,
-    durationMin: durationMinutes(session.startedAt, endedAt) ?? 1,
-    notes: String(notes ?? '').trim(),
-  }
+  const finished = { ...resumed, status: SESSION_STATUS.DONE, endedAt, notes: String(notes ?? '').trim() }
+  return { ...finished, durationMin: Math.max(1, Math.round(activeMillis(finished, now) / 60000)) }
 }
 
 /** Pasa a otro ejercicio. Apunta cuándo se entró en él por primera vez. */

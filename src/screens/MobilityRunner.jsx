@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { finishMobilitySession, formatClock } from '../core/workout.js'
+import { activeMillis, finishMobilitySession, formatClock, pauseSession, resumeSession } from '../core/workout.js'
 import { discardSession, loadSession, saveSession } from '../storage/sessions.js'
 import { keepScreenAwake } from '../ui/feedback.js'
 
@@ -73,8 +73,20 @@ export default function MobilityRunner({ db, sessionId, onExit, onChanged }) {
     )
   }
 
-  const seconds = Math.max(0, Math.floor((now - Date.parse(session.startedAt)) / 1000))
+  const seconds = Math.floor(activeMillis(session, new Date(now)) / 1000)
   const minutes = Math.floor(seconds / 60)
+  const paused = Boolean(session.pausedAt)
+
+  async function togglePause() {
+    // (la pausa se guarda enseguida: si cierras la app en pausa, sigue en pausa al volver)
+    const next = paused ? resumeSession(session) : pauseSession(session)
+    setSession(next)
+    try {
+      await saveSession(db, next) // la pausa queda guardada aunque se cierre la app
+    } catch (e) {
+      setError(`No se pudo guardar la pausa: ${e.message}`)
+    }
+  }
 
   async function finish() {
     try {
@@ -108,12 +120,17 @@ export default function MobilityRunner({ db, sessionId, onExit, onChanged }) {
         <span className="muted small">{session.name}</span>
       </div>
       <h1>Movilidad</h1>
-      <section className="card mobility-clock" aria-live="off">
+      <section className={`card mobility-clock${paused ? ' mobility-paused' : ''}`} aria-live="off">
         <span className="rest-clock" role="timer">
           {formatClock(seconds)}
         </span>
-        <span className="muted small">{minutes} min desde que empezaste</span>
+        <span className="muted small">{paused ? 'En pausa: el reloj está parado' : `${minutes} min de movilidad`}</span>
       </section>
+      <div className="actions">
+        <button type="button" className="btn btn-secondary big-check" onClick={togglePause}>
+          {paused ? '▶ Continuar' : '⏸ Pausar'}
+        </button>
+      </div>
       <p className="muted small">Hazla a tu manera. Cuando termines, pulsa «Terminar» y se guarda el tiempo real.</p>
 
       <section className="card">

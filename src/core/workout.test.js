@@ -3,7 +3,7 @@ import { DEFAULT_SCALES, DEFAULT_TEMPLATES } from './defaultData.js'
 import { DEFAULT_EXERCISES } from './exerciseLibrary.js'
 import { suggestNextTemplateId } from './templates.js'
 import {
-  WARNING_SECONDS, addSetToExercise, buildSet, finishMobilitySession, startMobilitySession, crossedEnd, crossedWarning, defaultLevelId, defaultReps, durationMinutes,
+  WARNING_SECONDS, activeMillis, addSetToExercise, buildSet, finishMobilitySession, pauseSession, resumeSession, startMobilitySession, crossedEnd, crossedWarning, defaultLevelId, defaultReps, durationMinutes,
   finishSession, formatClock, goToExercise, lastPerformance, lastPerformanceText, repStep, restRemaining, sessionSummary,
   setExerciseNotes, setId, startStrengthSession, toQuickDraft, touchExercise, validateQuickLog,
 } from './workout.js'
@@ -326,5 +326,59 @@ describe('sesión de movilidad con inicio y fin', () => {
     expect(done.type).toBe('mobility')
     expect(done.status).toBe('done')
     expect(done.durationMin).toBe(15)
+  })
+})
+
+describe('pausa en la sesión de movilidad', () => {
+  const t = (time) => new Date(`2026-11-09T${time}Z`)
+  const started = startMobilitySession({ now: t('07:00:00'), id: 'p1' })
+
+  it('el tiempo de sesión no cuenta lo que se pasa en pausa', () => {
+    const paused = pauseSession(started, t('07:05:00'))
+    expect(activeMillis(paused, t('07:05:00'))).toBe(5 * 60_000)
+    expect(activeMillis(paused, t('07:12:00'))).toBe(5 * 60_000) // sigue en pausa: el reloj no avanza
+    const resumed = resumeSession(paused, t('07:12:00'))
+    expect(resumed).toMatchObject({ pausedAt: null, pausedMs: 7 * 60_000 })
+    expect(activeMillis(resumed, t('07:20:00'))).toBe(13 * 60_000) // 20 min en total menos 7 de pausa
+  })
+
+  it('varias pausas se suman', () => {
+    let s = pauseSession(started, t('07:02:00'))
+    s = resumeSession(s, t('07:03:00'))
+    s = pauseSession(s, t('07:06:00'))
+    s = resumeSession(s, t('07:10:00'))
+    expect(s.pausedMs).toBe(5 * 60_000)
+    expect(activeMillis(s, t('07:15:00'))).toBe(10 * 60_000)
+  })
+
+  it('pausar dos veces o continuar sin pausa no cambia nada', () => {
+    const paused = pauseSession(started, t('07:05:00'))
+    expect(pauseSession(paused, t('07:09:00'))).toBe(paused) // conserva la primera hora de pausa
+    expect(resumeSession(started, t('07:09:00'))).toBe(started)
+  })
+
+  it('al terminar se guarda el tiempo sin pausas', () => {
+    let s = pauseSession(started, t('07:10:00'))
+    s = resumeSession(s, t('07:20:00'))
+    const done = finishMobilitySession(s, { now: t('07:30:00') })
+    expect(done).toMatchObject({ status: 'done', durationMin: 20, pausedAt: null })
+    expect(done.endedAt).toBe('2026-11-09T07:30:00.000Z')
+  })
+
+  it('si se termina estando en pausa, esa pausa tampoco cuenta', () => {
+    const paused = pauseSession(started, t('07:15:00'))
+    const done = finishMobilitySession(paused, { now: t('07:40:00') })
+    expect(done.durationMin).toBe(15)
+    expect(done.pausedAt).toBeNull()
+  })
+
+  it('una sesión sin pausas se calcula como antes, y el original no cambia', () => {
+    expect(finishMobilitySession(started, { now: t('07:15:00') }).durationMin).toBe(15)
+    pauseSession(started, t('07:05:00'))
+    expect(started.pausedAt).toBeUndefined()
+  })
+
+  it('con datos rotos no devuelve NaN', () => {
+    expect(activeMillis({ startedAt: 'mal' }, t('07:00:00'))).toBe(0)
   })
 })
