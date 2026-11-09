@@ -5,9 +5,10 @@ import { DEFAULT_GOALS } from './core/defaultData.js'
 import { DEFAULT_REST_SECONDS } from './core/templates.js'
 import { seedIfNeeded, seedLibraryIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded } from './storage/seed.js'
 import { applyTheme } from './theme.js'
-import { CalendarIcon, DumbbellIcon, HistoryIcon, HomeIcon, SlidersIcon } from './ui/icons.jsx'
+import { CalendarIcon, ChartIcon, DumbbellIcon, HistoryIcon, HomeIcon, SlidersIcon } from './ui/icons.jsx'
 import Exercises from './screens/Exercises.jsx'
 import History from './screens/History.jsx'
+import Progress from './screens/Progress.jsx'
 import SessionRunner from './screens/SessionRunner.jsx'
 import Settings from './screens/Settings.jsx'
 import Today from './screens/Today.jsx'
@@ -17,6 +18,7 @@ const TABS = [
   { id: 'today', label: 'Hoy', Icon: HomeIcon },
   { id: 'week', label: 'Semana', Icon: CalendarIcon },
   { id: 'history', label: 'Historial', Icon: HistoryIcon },
+  { id: 'progress', label: 'Progreso', Icon: ChartIcon },
   { id: 'exercises', label: 'Ejercicios', Icon: DumbbellIcon },
   { id: 'settings', label: 'Ajustes', Icon: SlidersIcon },
 ]
@@ -151,6 +153,9 @@ export default function App() {
         )}
         {tab === 'history' && (
           <History db={state.db} sessions={state.sessions} exercises={state.exercises} scales={state.scales} onChanged={reload} />
+        )}
+        {tab === 'progress' && (
+          <Progress db={state.db} sessions={state.sessions} exercises={state.exercises} scales={state.scales} templates={state.templates} />
         )}
         {tab === 'exercises' && (
           <Exercises db={state.db} exercises={state.exercises} scales={state.scales} rules={state.rules} onChanged={reload} />

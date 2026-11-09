@@ -89,7 +89,7 @@ export default function Today({ db, plan, templates, exercises, sessions, rules,
   async function start(template, slotId = null) {
     setError(null)
     try {
-      const session = startStrengthSession({ template, slotId })
+      const session = startStrengthSession({ template, slotId, restSeconds })
       await saveSession(db, session)
       await onChanged()
       onOpenSession(session.id)

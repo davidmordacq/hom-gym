@@ -17,9 +17,10 @@ export const setId = (sessionId, exerciseId, order) => `${sessionId}:${exerciseI
 export const repStep = (exercise) => (exercise?.unit === EXERCISE_UNITS.SECONDS ? 5 : 1)
 
 /** Crea una sesión de fuerza nueva a partir de una sesión tipo. Guarda una COPIA de sus ejercicios. */
-export function startStrengthSession({ template, slotId = null, now = new Date(), id = newSessionId(now.getTime()) }) {
+export function startStrengthSession({ template, slotId = null, now = new Date(), id = newSessionId(now.getTime()), restSeconds = 120 }) {
   const startedAt = now.toISOString()
   return {
+    restSeconds, // el descanso que había al empezar: sirve para calcular el tiempo del core en los descansos
     id,
     type: SESSION_TYPES.STRENGTH,
     status: SESSION_STATUS.IN_PROGRESS,

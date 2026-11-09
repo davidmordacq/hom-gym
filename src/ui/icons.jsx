@@ -28,6 +28,12 @@ export const HistoryIcon = () => (
   </Svg>
 )
 
+export const ChartIcon = () => (
+  <Svg>
+    <path d="M4 20V10M10 20V4M16 20v-8M22 20H2" />
+  </Svg>
+)
+
 export const DumbbellIcon = () => (
   <Svg>
     <path d="M6 8v8M3 10v4M18 8v8M21 10v4M6 12h12" />
