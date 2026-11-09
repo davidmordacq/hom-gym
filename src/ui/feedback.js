@@ -29,15 +29,21 @@ function tone(frequency, startSeconds, durationSeconds) {
   oscillator.stop(start + durationSeconds + 0.05)
 }
 
-const vibrate = (pattern) => {
+/**
+ * Intenta vibrar y dice qué pasó: 'ok' (el navegador la aceptó), 'unsupported' (este navegador no tiene vibración)
+ * o 'blocked' (la tiene pero no la deja usar: por ejemplo, ajustes del móvil o falta un toque previo en la página).
+ * Aceptar no garantiza que el móvil vibre: eso depende también de los ajustes de sonido y vibración del teléfono.
+ */
+export function tryVibrate(pattern, nav = typeof navigator === 'undefined' ? undefined : navigator) {
+  if (!nav || typeof nav.vibrate !== 'function') return 'unsupported'
   try {
-    navigator.vibrate?.(pattern)
+    return nav.vibrate(pattern) ? 'ok' : 'blocked'
   } catch {
-    // sin vibración
+    return 'blocked'
   }
 }
 
-/** Aviso de "quedan 15 segundos": dos bips cortos. */
+/** Aviso de "quedan 15 segundos": dos bips cortos y una vibración. Devuelve el estado de la vibración. */
 export function warningBeep() {
   try {
     if (audioContext) {
@@ -47,17 +53,25 @@ export function warningBeep() {
   } catch {
     // sin sonido
   }
-  vibrate([150, 100, 150])
+  return tryVibrate([300, 150, 300])
 }
 
-/** Fin del descanso: un bip más largo y más grave. */
+/** Fin del descanso: un bip más largo y más grave, y una vibración larga. */
 export function endBeep() {
   try {
     if (audioContext) tone(660, 0, 0.5)
   } catch {
     // sin sonido
   }
-  vibrate([400])
+  return tryVibrate([600])
+}
+
+/** Para el botón "Probar el aviso" de Ajustes: suena, vibra y cuenta qué ha podido hacer. */
+export function testAlert() {
+  unlockAudio()
+  const sound = audioContext ? audioContext.state : 'unsupported'
+  const vibration = warningBeep()
+  return { sound, vibration }
 }
 
 /** Intenta mantener la pantalla encendida. Devuelve una función para soltarla. */

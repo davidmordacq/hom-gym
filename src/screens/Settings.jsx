@@ -2,8 +2,15 @@ import { useRef, useState } from 'react'
 import { createBackup, parseBackup } from '../core/backup.js'
 import { toIsoDate } from '../core/dates.js'
 import { validateGlobalRules } from '../core/progressionConfig.js'
+import { testAlert } from '../ui/feedback.js'
 import { exportAll, replaceAll, setSetting } from '../storage/db.js'
 import { THEMES, applyTheme } from '../theme.js'
+
+const VIBRATION_TEXT = {
+  ok: 'El navegador ha aceptado la vibración. Si el móvil no vibra, revisa los ajustes de sonido y vibración del teléfono.',
+  blocked: 'El navegador ha rechazado la vibración. Puede ser un ajuste del teléfono o del navegador.',
+  unsupported: 'Este navegador no permite vibrar desde una web.',
+}
 
 const REST_STEP = 15
 const REST_MIN = 30
@@ -16,6 +23,7 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, onC
   const [goal, setGoal] = useState({ min: rules.repRange.min, max: rules.repRange.max, sets: rules.targetSets })
   const [goalErrors, setGoalErrors] = useState([])
   const [goalSaved, setGoalSaved] = useState(false)
+  const [alertResult, setAlertResult] = useState(null)
   const fileInput = useRef(null)
 
   async function changeTheme(newTheme) {
@@ -124,6 +132,21 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, onC
             </button>
           </div>
         </div>
+      </section>
+
+      <section className="card">
+        <h2>Probar el aviso del descanso</h2>
+        <p className="muted small">Suena igual que a los 15 segundos de descanso. Sirve para comprobar el sonido y la vibración.</p>
+        <div className="actions">
+          <button type="button" className="btn btn-secondary" onClick={() => setAlertResult(testAlert())}>
+            Probar aviso
+          </button>
+        </div>
+        {alertResult && (
+          <p className="message" role="status">
+            {VIBRATION_TEXT[alertResult.vibration]}
+          </p>
+        )}
       </section>
 
       <form className="card" onSubmit={saveGoal} noValidate>
