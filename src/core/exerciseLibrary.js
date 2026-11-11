@@ -13,6 +13,15 @@ const R = RESISTANCE_TYPES.RESISTED
 const SECONDS = EXERCISE_UNITS.SECONDS
 const watch = (id) => `https://www.youtube.com/watch?v=${id}`
 
+/** Descripción de la sentadilla goblet (David, 2026-11-11: añadido bajar despacio y aguantar abajo para trabajar fuerza con menos repeticiones). */
+export const GOBLET_NOTES =
+  'Sujeta el saco contra el pecho (o ponte la mochila) y baja con la espalda recta hasta que los muslos queden paralelos al suelo. Para 20 kg: mochila puesta y saco en las manos. ' +
+  'Baja despacio, en unos 3-4 segundos, y aguanta 1-2 segundos abajo antes de subir con fuerza: con el mismo peso cuesta bastante más y te salen menos repeticiones, que es lo que buscas para trabajar fuerza.'
+
+/** La descripción que tenía antes: solo se sustituye en un móvil si David no la había cambiado. */
+export const OLD_GOBLET_NOTES =
+  'Sujeta el saco contra el pecho (o ponte la mochila) y baja con la espalda recta hasta que los muslos queden paralelos al suelo. Para 20 kg: mochila puesta y saco en las manos.'
+
 /**
  * Los 30 ejercicios de la primera versión de la biblioteca (entrega 1b). Sirve para saber cuáles ya se
  * ofrecieron en un móvil que se instaló antes de que existiera el registro de ejercicios ofrecidos.
@@ -38,8 +47,7 @@ export const DEFAULT_EXERCISES = [
     scaleId: 'kg',
     videoUrl: watch('XANUniwN1Jg'),
     videoChannel: 'Diana Ayala',
-    notes:
-      'Sujeta el saco contra el pecho (o ponte la mochila) y baja con la espalda recta hasta que los muslos queden paralelos al suelo. Para 20 kg: mochila puesta y saco en las manos.',
+    notes: GOBLET_NOTES,
   },
   {
     id: 'bodyweight-squat',
@@ -177,6 +185,21 @@ export const DEFAULT_EXERCISES = [
     videoChannel: 'Squat University Español',
     notes:
       'Pie de atrás apoyado en algo estable y alto (silla firme, sofá o escalón) y pie de delante lo bastante adelantado. Baja con el tronco recto. Con lastre, el saco contra el pecho o la mochila. Una serie son las repeticiones de cada pierna.',
+  },
+  {
+    id: 'single-leg-box-squat',
+    name: 'Sentadilla a una pierna con silla o caja',
+    muscleGroups: ['quads', 'glutes'],
+    resistanceType: R,
+    scaleId: 'kg',
+    videoUrl: watch('Y2n7MbxIYO4'),
+    videoChannel: 'Fitness real con el coach Emmanuel Navarro',
+    notes:
+      'Siéntate en una silla o caja firme, un poco MÁS ALTA que tu rodilla (no más baja al principio). Pie de trabajo plano en el suelo, a la anchura de la cadera, y la otra pierna estirada delante. ' +
+      'Agárrate con una mano a algo firme (marco de la puerta, la barra de dominadas) solo para el equilibrio, sin tirar de ello. Sube empujando con todo el pie y baja despacio, unos 3 segundos, sin dejarte caer sobre la silla. ' +
+      'RODILLA: que apunte siempre en la misma dirección que la punta del pie (hacia el segundo o tercer dedo). No la dejes caer hacia dentro ni bailar de un lado a otro para mantener el equilibrio. ' +
+      'Si se mueve de lado, estás demasiado bajo, con poco apoyo o con demasiado peso: sube la altura de la silla, agárrate más fuerte o vuelve a la búlgara hasta que la rodilla vaya recta. Cadera y hombros rectos, sin girar el cuerpo. ' +
+      'Para si notas dolor en la rodilla. El vídeo enseña el movimiento y la altura de la silla; la colocación de la rodilla está explicada aquí, no la cubre el vídeo. Una serie son las repeticiones de cada pierna.',
   },
 
   // ---- Espalda y bíceps ----

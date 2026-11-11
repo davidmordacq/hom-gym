@@ -1,11 +1,11 @@
 import 'fake-indexeddb/auto'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { DEFAULT_SCALES } from '../core/defaultData.js'
-import { DEFAULT_EXERCISES, ORIGINAL_LIBRARY_IDS } from '../core/exerciseLibrary.js'
+import { DEFAULT_EXERCISES, GOBLET_NOTES, OLD_GOBLET_NOTES, ORIGINAL_LIBRARY_IDS } from '../core/exerciseLibrary.js'
 import { get, getAll, getSetting, openDb, put, putMany, remove, replaceAll } from './db.js'
 import {
   seedIfNeeded, seedLibraryIfNeeded, seedLowerSquatsIfNeeded, seedPlanksInCorePoolIfNeeded, seedScaleLevelsIfNeeded,
-  seedTemplatesIfNeeded,
+  seedSingleLegSquatIfNeeded, seedTemplatesIfNeeded, updateGobletNotesIfNeeded,
 } from './seed.js'
 
 let db
@@ -187,7 +187,7 @@ describe('seedTemplatesIfNeeded (sesiones de partida)', () => {
     const templates = await getAll(db, 'templates')
     expect(templates.map((t) => t.id).sort()).toEqual(['tpl-lower', 'tpl-upper'])
     expect(templates.find((t) => t.id === 'tpl-upper').items).toHaveLength(6)
-    expect(templates.find((t) => t.id === 'tpl-lower').items).toHaveLength(6)
+    expect(templates.find((t) => t.id === 'tpl-lower').items).toHaveLength(7)
   })
 
   it('solo una vez: lo que borres o cambies no vuelve a cambiar', async () => {
@@ -293,6 +293,94 @@ describe('seedLowerSquatsIfNeeded (50 sentadillas primero en Tren inferior)', ()
     await put(db, 'templates', OLD_LOWER)
     expect(await seedLowerSquatsIfNeeded(db)).toBe(false)
     expect(await getSetting(db, 'lowerSquatsAdded', false)).toBe(false)
+  })
+})
+
+describe('seedSingleLegSquatIfNeeded (sentadilla a una pierna tras la búlgara)', () => {
+  const OLD_LOWER = {
+    id: 'tpl-lower',
+    name: 'Tren inferior',
+    order: 2,
+    items: [
+      { exerciseId: 'bodyweight-squat', sets: 1, perSide: false, coreExerciseId: null },
+      { exerciseId: 'bulgarian-split-squat', sets: 3, perSide: true, coreExerciseId: 'random' },
+      { exerciseId: 'goblet-squat', sets: 3, perSide: false, coreExerciseId: 'random' },
+    ],
+  }
+  const idsInLower = async () => (await get(db, 'templates', 'tpl-lower')).items.map((i) => i.exerciseId)
+
+  it('en un móvil con la sesión antigua, la pone justo después de la búlgara, a 3 series por cada lado, y solo una vez', async () => {
+    await seedLibraryIfNeeded(db)
+    await put(db, 'templates', OLD_LOWER)
+    expect(await seedSingleLegSquatIfNeeded(db)).toBe(true)
+    expect(await idsInLower()).toEqual(['bodyweight-squat', 'bulgarian-split-squat', 'single-leg-box-squat', 'goblet-squat'])
+    expect((await get(db, 'templates', 'tpl-lower')).items[2]).toMatchObject({ sets: 3, perSide: true, coreExerciseId: 'random' })
+    await put(db, 'templates', OLD_LOWER) // si luego la quita, no vuelve
+    expect(await seedSingleLegSquatIfNeeded(db)).toBe(false)
+    expect(await idsInLower()).toEqual(['bodyweight-squat', 'bulgarian-split-squat', 'goblet-squat'])
+  })
+
+  it('en una instalación nueva ya viene en la sesión de partida y no se duplica', async () => {
+    await seedIfNeeded(db)
+    await seedLibraryIfNeeded(db)
+    await seedTemplatesIfNeeded(db)
+    expect(await seedSingleLegSquatIfNeeded(db)).toBe(false)
+    expect((await idsInLower()).filter((id) => id === 'single-leg-box-squat')).toHaveLength(1)
+  })
+
+  it('sin la búlgara en la sesión, la pone la primera; sin sesión Tren inferior no crea nada', async () => {
+    await seedLibraryIfNeeded(db)
+    await put(db, 'templates', { ...OLD_LOWER, items: [OLD_LOWER.items[2]] })
+    await seedSingleLegSquatIfNeeded(db)
+    expect((await idsInLower())[0]).toBe('single-leg-box-squat')
+  })
+
+  it('sin ejercicios cargados no hace nada ni apunta la marca', async () => {
+    await put(db, 'templates', OLD_LOWER)
+    expect(await seedSingleLegSquatIfNeeded(db)).toBe(false)
+    expect(await getSetting(db, 'singleLegSquatAdded', false)).toBe(false)
+  })
+})
+
+describe('updateGobletNotesIfNeeded (descripción de la goblet)', () => {
+  it('cambia la descripción antigua por la nueva, que explica bajar despacio y aguantar abajo, una sola vez', async () => {
+    await put(db, 'exercises', { ...DEFAULT_EXERCISES.find((e) => e.id === 'goblet-squat'), notes: OLD_GOBLET_NOTES })
+    expect(await updateGobletNotesIfNeeded(db)).toBe(true)
+    const notes = (await get(db, 'exercises', 'goblet-squat')).notes
+    expect(notes).toBe(GOBLET_NOTES)
+    expect(notes).toMatch(/despacio/)
+    expect(notes).toMatch(/aguanta/)
+    expect(notes.startsWith(OLD_GOBLET_NOTES)).toBe(true) // conserva lo que ya decía
+    expect(await updateGobletNotesIfNeeded(db)).toBe(false)
+  })
+
+  it('si David la había editado, no la pisa', async () => {
+    await put(db, 'exercises', { ...DEFAULT_EXERCISES.find((e) => e.id === 'goblet-squat'), notes: 'Mi nota' })
+    expect(await updateGobletNotesIfNeeded(db)).toBe(false)
+    expect((await get(db, 'exercises', 'goblet-squat')).notes).toBe('Mi nota')
+  })
+
+  it('sin la goblet (borrada o aún no cargada) no hace nada', async () => {
+    expect(await updateGobletNotesIfNeeded(db)).toBe(false)
+    expect(await getAll(db, 'exercises')).toEqual([])
+  })
+})
+
+describe('la sentadilla a una pierna de la biblioteca', () => {
+  const squat = DEFAULT_EXERCISES.find((e) => e.id === 'single-leg-box-squat')
+  it('existe, con vídeo y una descripción que explica la rodilla, el apoyo y la altura de la silla', () => {
+    expect(squat).toBeDefined()
+    expect(squat.videoUrl).toMatch(/Y2n7MbxIYO4/)
+    expect(squat.notes).toMatch(/RODILLA/)
+    expect(squat.notes).toMatch(/misma dirección que la punta del pie/)
+    expect(squat.notes).toMatch(/hacia dentro/)
+    expect(squat.notes).toMatch(/de un lado a otro/)
+    expect(squat.notes).toMatch(/Agárrate/)
+    expect(squat.notes).toMatch(/más alta que tu rodilla/i)
+    expect(squat.notes).toMatch(/dolor/)
+  })
+  it('no es de los 30 originales (llega al móvil como ejercicio nuevo)', () => {
+    expect(ORIGINAL_LIBRARY_IDS).not.toContain('single-leg-box-squat')
   })
 })
 

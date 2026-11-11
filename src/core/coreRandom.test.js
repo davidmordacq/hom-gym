@@ -314,6 +314,6 @@ describe('core aleatorio en las sesiones', () => {
       for (const item of template.items) expect([null, 'random']).toContain(item.coreExerciseId)
     }
     expect(upper.items.filter((i) => i.coreExerciseId === 'random')).toHaveLength(5)
-    expect(lower.items.filter((i) => i.coreExerciseId === 'random')).toHaveLength(4)
+    expect(lower.items.filter((i) => i.coreExerciseId === 'random')).toHaveLength(5)
   })
 })

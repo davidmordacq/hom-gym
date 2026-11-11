@@ -4,10 +4,10 @@ import { toIsoDate } from '../core/dates.js'
 import {
   DEFAULT_GOALS, DEFAULT_SCALES, DEFAULT_TEMPLATES, DEFAULT_WEEK_PLAN, SCALE_LEVEL_ADDITIONS,
 } from '../core/defaultData.js'
-import { DEFAULT_EXERCISES, ORIGINAL_LIBRARY_IDS } from '../core/exerciseLibrary.js'
+import { DEFAULT_EXERCISES, GOBLET_NOTES, OLD_GOBLET_NOTES, ORIGINAL_LIBRARY_IDS } from '../core/exerciseLibrary.js'
 import { RANDOM_CORE } from '../core/model.js'
 import { DEFAULT_PROGRESSION_RULES } from '../core/progressionConfig.js'
-import { getAll, getSetting, writeAll } from './db.js'
+import { get, getAll, getSetting, writeAll } from './db.js'
 
 /** Carga los datos de partida si es la primera vez. Devuelve true si los cargó. */
 export async function seedIfNeeded(db) {
@@ -150,6 +150,45 @@ export async function seedLowerSquatsIfNeeded(db) {
     return false
   }
   await writeAll(db, { templates: [{ ...lower, items: [{ ...squat }, ...lower.items] }], settings })
+  return true
+}
+
+/**
+ * Pone la sentadilla a una pierna con silla justo después de la búlgara en la sesión Tren inferior que David ya tuviera
+ * (una sola vez; ajuste "singleLegSquatAdded"). Si ya la tenía, la había quitado de la biblioteca o no hay sesión, no
+ * toca nada. Ejecutar DESPUÉS de seedLibraryIfNeeded y seedTemplatesIfNeeded. Devuelve true si cambió la sesión.
+ */
+export async function seedSingleLegSquatIfNeeded(db) {
+  if (await getSetting(db, 'singleLegSquatAdded', false)) return false
+  const [exercises, templates] = await Promise.all([getAll(db, 'exercises'), getAll(db, 'templates')])
+  if (exercises.length === 0 || templates.length === 0) return false // se intentará otra vez más adelante
+  const lower = templates.find((t) => t.id === 'tpl-lower')
+  const item = DEFAULT_TEMPLATES.find((t) => t.id === 'tpl-lower').items.find((i) => i.exerciseId === 'single-leg-box-squat')
+  const settings = [{ key: 'singleLegSquatAdded', value: true }]
+  if (!lower || !exercises.some((e) => e.id === item.exerciseId) || lower.items.some((i) => i.exerciseId === item.exerciseId)) {
+    await writeAll(db, { settings })
+    return false
+  }
+  const after = lower.items.findIndex((i) => i.exerciseId === 'bulgarian-split-squat')
+  const at = after >= 0 ? after + 1 : 0
+  const items = [...lower.items.slice(0, at), { ...item }, ...lower.items.slice(at)]
+  await writeAll(db, { templates: [{ ...lower, items }], settings })
+  return true
+}
+
+/**
+ * Cambia la descripción de la sentadilla goblet por la nueva (con lo de bajar despacio y aguantar), una sola vez y solo
+ * si David no la había editado (ajuste "gobletNotesUpdated"). Devuelve true si la cambió.
+ */
+export async function updateGobletNotesIfNeeded(db) {
+  if (await getSetting(db, 'gobletNotesUpdated', false)) return false
+  const goblet = await get(db, 'exercises', 'goblet-squat')
+  const settings = [{ key: 'gobletNotesUpdated', value: true }]
+  if (!goblet || (goblet.notes ?? '').trim() !== OLD_GOBLET_NOTES) {
+    if (goblet) await writeAll(db, { settings }) // editada por David (o ya nueva): no se toca
+    return false
+  }
+  await writeAll(db, { exercises: [{ ...goblet, notes: GOBLET_NOTES }], settings })
   return true
 }
 

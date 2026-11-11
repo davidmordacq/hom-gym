@@ -95,11 +95,11 @@ describe('estimateMinutes', () => {
     expect(estimateMinutes(upper, exercises)).toBe(55)
   })
 
-  it('piernas con 1 min de descanso (también las sentadillas a dos piernas) y las 50 sentadillas contando unos 2 min: tren inferior en 45 min', () => {
-    // 5 min + 1 × (125 + 60) s + 4 × 3 × (90 + 60) s + 1 × 3 × (45 + 60) s = 5 + 3,08 + 30 + 5,25 = 43,3 → 45
-    expect(estimateMinutes(lower, exercises)).toBe(45)
-    // con el descanso largo de antes en todo saldría a 60 min
-    expect(estimateMinutes(lower, exercises, { perSideRestSeconds: 120 })).toBe(60)
+  it('piernas con 1 min de descanso (también las sentadillas a dos piernas) y las 50 sentadillas contando unos 2 min: tren inferior en 50 min', () => {
+    // 5 min + 1 × (125 + 60) s + 5 × 3 × (90 + 60) s + 1 × 3 × (45 + 60) s = 5 + 3,08 + 37,5 + 5,25 = 50,8 → 50
+    expect(estimateMinutes(lower, exercises)).toBe(50)
+    // con el descanso largo de antes en todo saldría a 70 min
+    expect(estimateMinutes(lower, exercises, { perSideRestSeconds: 120 })).toBe(70)
     // el tren superior no cambia: ningún ejercicio suyo es de pierna
     expect(estimateMinutes(upper, exercises)).toBe(estimateMinutes(upper, exercises, { perSideRestSeconds: 30 }))
     const sinLados = { items: lower.items.map((i) => ({ ...i, perSide: false })) }
