@@ -207,8 +207,8 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, las
           </p>
         )}
         <p className="muted small">
-          Las planchas (frontal y lateral) salen en los descansos de todos los ejercicios menos en los de espalda (dominadas), porque
-          trabajan algo los dorsales y los hombros y podrían restarte fuerza en la siguiente serie.
+          Las planchas (frontal y lateral) no salen en los descansos de dominadas, flexiones ni elevaciones de hombro, porque cargan
+          los dorsales y los hombros y podrían restarte fuerza en la siguiente serie. Solo salen en los ejercicios de pierna.
         </p>
       </section>
 

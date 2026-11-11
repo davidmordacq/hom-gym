@@ -157,14 +157,40 @@ describe('core aleatorio en los descansos', () => {
     expect(planksElsewhere).toBeGreaterThan(20)
   })
 
-  it('las planchas no salen en el descanso de dominadas ni de dominadas supinas, pero sí en el de otros ejercicios', () => {
+  it('las planchas no salen en el descanso de dominadas, flexiones ni hombros, pero sí en el de pierna', () => {
     const byId = new Map(exercises.map((e) => [e.id, e]))
-    for (const id of ['assisted-pull-up', 'assisted-chin-up']) expect(coreAvoidFor(byId.get(id)).sort(), id).toEqual(['plank', 'side-plank'])
-    for (const id of ['push-up', 'close-push-up', 'banded-lateral-raise', 'banded-front-raise', 'bulgarian-split-squat', 'single-leg-rdl', 'goblet-squat']) {
+    for (const id of ['assisted-pull-up', 'assisted-chin-up', 'push-up', 'close-push-up', 'banded-lateral-raise', 'banded-front-raise']) {
+      expect(coreAvoidFor(byId.get(id)).sort(), id).toEqual(['plank', 'side-plank'])
+    }
+    for (const id of ['bulgarian-split-squat', 'single-leg-rdl', 'single-leg-bridge', 'calf-raise', 'goblet-squat']) {
       expect(coreAvoidFor(byId.get(id)), id).toEqual([])
     }
     expect(coreAvoidFor(null)).toEqual([])
     expect(coreAvoidFor({ id: 'x', muscleGroups: [] })).toEqual([])
+  })
+
+  it('en una sesión de tren inferior entera sí salen planchas, y en la de tren superior ninguna', () => {
+    const byId = new Map(exercises.map((e) => [e.id, e]))
+    const planksIn = (template) => {
+      let count = 0
+      for (let seed = 1; seed <= 50; seed++) {
+        const random = seededRandom(seed)
+        let bag = []
+        let last = null
+        for (const item of template.items) {
+          for (let n = 0; n < item.sets; n++) {
+            const draw = chooseCore({ mode: item.coreExerciseId, pool: CORE_REST_POOL_IDS, bag, lastId: last, avoid: coreAvoidFor(byId.get(item.exerciseId)), random })
+            if (!draw.id) continue
+            if (draw.id === 'plank' || draw.id === 'side-plank') count += 1
+            bag = draw.bag
+            last = draw.id
+          }
+        }
+      }
+      return count
+    }
+    expect(planksIn(upper)).toBe(0)
+    expect(planksIn(lower)).toBeGreaterThan(10)
   })
 
   it('en una sesión de tren superior entera, con el conjunto por defecto, ninguna plancha cae tras unas dominadas', () => {

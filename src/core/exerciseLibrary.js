@@ -476,9 +476,12 @@ export const CORE_REST_POOL_IDS = Object.freeze([
 /**
  * Ejercicios de core que NO deben tocar en el descanso de un ejercicio según su músculo principal (decisión de David,
  * 2026-11-09): las planchas, sobre todo la lateral, trabajan algo los dorsales y los hombros y podrían restar fuerza
- * en la siguiente serie de dominadas. Para ampliarlo (por ejemplo, a las flexiones) basta añadir 'chest' o 'shoulders'.
+ * en la siguiente serie de dominadas. Ampliado (David, 2026-11-11) a los ejercicios de tren superior que cargan los
+ * hombros: flexiones (pecho; las de manos juntas cuentan como tríceps) y elevaciones de hombro. En la práctica, las
+ * planchas solo salen en los descansos de la sesión de tren inferior.
  */
+const UPPER_BODY_GROUPS = Object.freeze(['back', 'chest', 'triceps', 'shoulders'])
 export const CORE_REST_NOT_AFTER = Object.freeze({
-  plank: Object.freeze(['back']),
-  'side-plank': Object.freeze(['back']),
+  plank: UPPER_BODY_GROUPS,
+  'side-plank': UPPER_BODY_GROUPS,
 })
