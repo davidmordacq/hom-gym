@@ -2,13 +2,22 @@
 // Solo lógica, sin pantallas.
 
 import { MUSCLE_GROUPS } from './defaultData.js'
+import { isLegExercise } from './exercises.js'
 import { EXERCISE_UNITS, RANDOM_CORE, SESSION_STATUS, SESSION_TYPES } from './model.js'
 import { DEFAULT_PROGRESSION_RULES, getRulesForExercise } from './progressionConfig.js'
 
 /** Descanso entre series por defecto (2 minutos). En la entrega 1d será un ajuste. */
 export const DEFAULT_REST_SECONDS = 120
-/** Descanso en los ejercicios a una pierna o un brazo: mientras trabaja un lado, el otro ya descansa (David, 2026-11-11). */
+/**
+ * Descanso corto (David, 2026-11-11): en los ejercicios de pierna (también los de dos piernas, como la sentadilla normal)
+ * y en los que se hacen a un lado, porque mientras trabaja un lado el otro ya descansa. El resto usa el descanso normal.
+ */
 export const DEFAULT_PER_SIDE_REST_SECONDS = 60
+
+/** Descanso de un ejercicio de una sesión: el corto si es de pierna o va "por cada lado", el normal si no. */
+export function restSecondsFor({ perSide, exercise }, { restSeconds = DEFAULT_REST_SECONDS, perSideRestSeconds = DEFAULT_PER_SIDE_REST_SECONDS } = {}) {
+  return perSide || isLegExercise(exercise) ? perSideRestSeconds : restSeconds
+}
 /** Una sesión no debería pasar de aquí (decisión de David: no más de 1 h). */
 export const MAX_SESSION_MINUTES = 60
 export const MAX_SETS_PER_EXERCISE = 10
@@ -106,7 +115,7 @@ export function estimateMinutes(
       work = Math.max(work, getRulesForExercise(exercise, rules).repRange.max * SECONDS_PER_LONG_REP)
     }
     if (item.perSide) work *= 2
-    seconds += sets * (work + (item.perSide ? perSideRestSeconds : restSeconds))
+    seconds += sets * (work + restSecondsFor({ perSide: item.perSide, exercise }, { restSeconds, perSideRestSeconds }))
   }
   return Math.round(seconds / 60 / 5) * 5
 }

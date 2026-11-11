@@ -7,7 +7,7 @@ import { levelsEasyToHard, mainMuscleGroup } from './exercises.js'
 import { EXERCISE_UNITS, RANDOM_CORE, SESSION_STATUS, SESSION_TYPES } from './model.js'
 import { DEFAULT_PROGRESSION_RULES, getRulesForExercise } from './progressionConfig.js'
 import { findLevel } from './resistance.js'
-import { DEFAULT_PER_SIDE_REST_SECONDS, DEFAULT_REST_SECONDS } from './templates.js'
+import { DEFAULT_PER_SIDE_REST_SECONDS, DEFAULT_REST_SECONDS, restSecondsFor } from './templates.js'
 
 /** Segundos que quedan de descanso cuando suena el aviso para prepararse. */
 export const WARNING_SECONDS = 15
@@ -26,8 +26,10 @@ export function startStrengthSession({
   id = newSessionId(now.getTime()),
   restSeconds = DEFAULT_REST_SECONDS,
   perSideRestSeconds = DEFAULT_PER_SIDE_REST_SECONDS,
+  exercises = [], // la biblioteca: sirve para saber qué ejercicios son de pierna
 }) {
   const startedAt = now.toISOString()
+  const byId = new Map(exercises.map((e) => [e.id, e]))
   return {
     restSeconds, // el descanso que había al empezar: sirve para calcular el tiempo del core en los descansos
     id,
@@ -47,7 +49,8 @@ export function startStrengthSession({
       exerciseId: item.exerciseId,
       targetSets: item.sets,
       perSide: Boolean(item.perSide),
-      restSeconds: item.perSide ? perSideRestSeconds : restSeconds, // descanso de este ejercicio (a una pierna, más corto)
+      // descanso de este ejercicio: más corto en los de pierna y a un lado
+      restSeconds: restSecondsFor({ perSide: item.perSide, exercise: byId.get(item.exerciseId) }, { restSeconds, perSideRestSeconds }),
       coreExerciseId: item.coreExerciseId ?? null,
       notes: '',
       startedAt: i === 0 ? startedAt : null,

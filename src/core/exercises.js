@@ -1,6 +1,6 @@
 // Reglas para crear y editar ejercicios (validación y orden de los niveles). Solo lógica, sin pantallas.
 
-import { MUSCLE_GROUPS } from './defaultData.js'
+import { MUSCLE_GROUPS, regionOfGroup } from './defaultData.js'
 import { EXERCISE_UNITS, RESISTANCE_TYPES } from './model.js'
 import { getRulesForExercise } from './progressionConfig.js'
 import { NO_ASSISTANCE, difficultyRank } from './resistance.js'
@@ -39,6 +39,9 @@ export function toDraft(exercise) {
  * Decisión de David (2026-11-09): un ejercicio que trabaja varios músculos cuenta solo para el principal.
  */
 export const mainMuscleGroup = (exercise) => exercise?.muscleGroups?.[0] ?? null
+
+/** ¿Es un ejercicio de pierna (su músculo principal es del tren inferior)? Descansan menos: ver `restSecondsFor`. */
+export const isLegExercise = (exercise) => regionOfGroup(mainMuscleGroup(exercise)) === 'lower'
 
 /**
  * Dónde se usa un ejercicio: series registradas, sesiones (hechas o en curso) que lo llevan y sesiones de fuerza tipo.

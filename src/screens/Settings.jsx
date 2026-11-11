@@ -165,8 +165,8 @@ export default function Settings({ db, theme, persisted, restSeconds, perSideRes
           </div>
         </div>
         <div className="item-row">
-          <span className="muted">En ejercicios a una pierna o un brazo (mientras trabaja un lado, el otro ya descansa).</span>
-          <div className="stepper" role="group" aria-label="Descanso en ejercicios a una pierna">
+          <span className="muted">En ejercicios de pierna y en los que se hacen con cada lado por separado.</span>
+          <div className="stepper" role="group" aria-label="Descanso en ejercicios de pierna">
             <button
               type="button"
               className="step-btn"

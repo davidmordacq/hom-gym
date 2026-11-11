@@ -109,7 +109,7 @@ export default function TemplateEditor({ initial, templates, exercises, rules, r
         </p>
         <p className="muted small">
           Calcula 5 min de calentamiento, unos 45 s por serie (el doble si se hace con cada lado) y {formatRest(restSeconds)} de
-          descanso tras cada serie ({formatRest(perSideRestSeconds)} en los ejercicios a una pierna o un brazo). El core del descanso no suma tiempo. Es una estimación: el tiempo real se mide en cada sesión.
+          descanso tras cada serie ({formatRest(perSideRestSeconds)} en los ejercicios de pierna y en los de cada lado por separado). El core del descanso no suma tiempo. Es una estimación: el tiempo real se mide en cada sesión.
         </p>
       </section>
 

@@ -33,14 +33,21 @@ describe('startStrengthSession', () => {
     expect(s.exercises[0]).toMatchObject({ exerciseId: 'assisted-pull-up', targetSets: 3, coreExerciseId: 'random' })
   })
 
-  it('cada ejercicio guarda su descanso: 2 min normal, 1 min en los de una pierna (configurable)', () => {
+  it('cada ejercicio guarda su descanso: 1 min en todos los de pierna (también a dos piernas) y 2 min en el resto', () => {
     const lower = DEFAULT_TEMPLATES[1]
-    const s = startStrengthSession({ template: lower, now: NOW, id: 's3' })
-    for (const entry of s.exercises) expect(entry.restSeconds, entry.exerciseId).toBe(entry.perSide ? 60 : 120)
-    expect(s.exercises.some((e) => e.perSide) && s.exercises.some((e) => !e.perSide)).toBe(true)
-    const custom = startStrengthSession({ template: lower, now: NOW, id: 's4', restSeconds: 90, perSideRestSeconds: 45 })
-    for (const entry of custom.exercises) expect(entry.restSeconds).toBe(entry.perSide ? 45 : 90)
+    const s = startStrengthSession({ template: lower, now: NOW, id: 's3', exercises: DEFAULT_EXERCISES })
+    for (const entry of s.exercises) expect(entry.restSeconds, entry.exerciseId).toBe(60)
+    expect(s.exercises.map((e) => e.exerciseId)).toEqual(expect.arrayContaining(['bodyweight-squat', 'goblet-squat']))
+    const up = startStrengthSession({ template: upper, now: NOW, id: 's5', exercises: DEFAULT_EXERCISES })
+    for (const entry of up.exercises) expect(entry.restSeconds, entry.exerciseId).toBe(120)
+    const custom = startStrengthSession({ template: lower, now: NOW, id: 's4', restSeconds: 90, perSideRestSeconds: 45, exercises: DEFAULT_EXERCISES })
+    for (const entry of custom.exercises) expect(entry.restSeconds).toBe(45)
     expect(custom.restSeconds).toBe(90)
+  })
+
+  it('sin la lista de ejercicios, solo los "por cada lado" descansan menos (no se sabe cuáles son de pierna)', () => {
+    const s = startStrengthSession({ template: DEFAULT_TEMPLATES[1], now: NOW, id: 's6' })
+    for (const entry of s.exercises) expect(entry.restSeconds).toBe(entry.perSide ? 60 : 120)
   })
 
   it('la fecha es la del día local en que empieza, y puede venir de un hueco del plan', () => {
