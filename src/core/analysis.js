@@ -66,9 +66,11 @@ export function sessionStats(session, sets, exercises) {
     })
 
   // Core en los descansos.
-  const restSeconds = session.restSeconds ?? DEFAULT_REST_SECONDS
-  const coreSeconds = Math.round(restSeconds * CORE_REST_FRACTION)
+  // Cada ejercicio guarda su propio descanso (los de una pierna descansan menos); las sesiones antiguas, el de la sesión.
+  const restOf = (exerciseId) =>
+    session.exercises?.find((e) => e.exerciseId === exerciseId)?.restSeconds ?? session.restSeconds ?? DEFAULT_REST_SECONDS
   for (const set of mine.filter((s) => s.coreAfter)) {
+    const coreSeconds = Math.round(restOf(set.exerciseId) * CORE_REST_FRACTION)
     // El core de los descansos (también los ejercicios de lumbares) se anota siempre como "core".
     const coreGroup = CORE_REST_GROUP
     const lastOrder = Math.max(...mine.filter((s) => s.exerciseId === set.exerciseId).map((s) => s.order))

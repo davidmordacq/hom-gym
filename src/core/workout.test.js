@@ -33,6 +33,16 @@ describe('startStrengthSession', () => {
     expect(s.exercises[0]).toMatchObject({ exerciseId: 'assisted-pull-up', targetSets: 3, coreExerciseId: 'random' })
   })
 
+  it('cada ejercicio guarda su descanso: 2 min normal, 1 min en los de una pierna (configurable)', () => {
+    const lower = DEFAULT_TEMPLATES[1]
+    const s = startStrengthSession({ template: lower, now: NOW, id: 's3' })
+    for (const entry of s.exercises) expect(entry.restSeconds, entry.exerciseId).toBe(entry.perSide ? 60 : 120)
+    expect(s.exercises.some((e) => e.perSide) && s.exercises.some((e) => !e.perSide)).toBe(true)
+    const custom = startStrengthSession({ template: lower, now: NOW, id: 's4', restSeconds: 90, perSideRestSeconds: 45 })
+    for (const entry of custom.exercises) expect(entry.restSeconds).toBe(entry.perSide ? 45 : 90)
+    expect(custom.restSeconds).toBe(90)
+  })
+
   it('la fecha es la del día local en que empieza, y puede venir de un hueco del plan', () => {
     expect(startStrengthSession({ template: upper, now: new Date(2026, 10, 7, 23, 50), slotId: 'sat' }).date).toBe('2026-11-07')
     expect(startStrengthSession({ template: upper, now: NOW, slotId: 'mon-strength' }).slotId).toBe('mon-strength')

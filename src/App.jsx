@@ -4,7 +4,7 @@ import { DEFAULT_PROGRESSION_RULES, sanitizeRules } from './core/progressionConf
 import { syncIntervals } from './storage/intervalsSync.js'
 import { getAll, getSetting, openDb } from './storage/db.js'
 import { DEFAULT_GOALS } from './core/defaultData.js'
-import { DEFAULT_REST_SECONDS } from './core/templates.js'
+import { DEFAULT_PER_SIDE_REST_SECONDS, DEFAULT_REST_SECONDS } from './core/templates.js'
 import {
   migrateCoreToRandomIfNeeded, seedIfNeeded, seedLibraryIfNeeded, seedLowerSquatsIfNeeded, seedPlanksInCorePoolIfNeeded,
   seedScaleLevelsIfNeeded, seedTemplatesIfNeeded,
@@ -49,7 +49,7 @@ async function loadAppData(db) {
   await migrateCoreToRandomIfNeeded(db)
   await seedPlanksInCorePoolIfNeeded(db)
   await seedLowerSquatsIfNeeded(db)
-  const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds, installedAt, lastBackupAt, backupSnoozedUntil, intervalsKey, intervalsLastSyncAt, intervalsLastResult, storedCorePool] = await Promise.all([
+  const [plan, theme, exercises, scales, rules, templates, sessions, goals, restSeconds, perSideRestSeconds, installedAt, lastBackupAt, backupSnoozedUntil, intervalsKey, intervalsLastSyncAt, intervalsLastResult, storedCorePool] = await Promise.all([
     getAll(db, 'plan'),
     getSetting(db, 'theme', 'dark'),
     getAll(db, 'exercises'),
@@ -59,6 +59,7 @@ async function loadAppData(db) {
     getAll(db, 'sessions'),
     getSetting(db, 'goals', DEFAULT_GOALS),
     getSetting(db, 'restSeconds', DEFAULT_REST_SECONDS),
+    getSetting(db, 'perSideRestSeconds', DEFAULT_PER_SIDE_REST_SECONDS),
     getSetting(db, 'installedAt', null),
     getSetting(db, 'lastBackupAt', null),
     getSetting(db, 'backupSnoozedUntil', null),
@@ -79,6 +80,7 @@ async function loadAppData(db) {
     sessions,
     goals,
     restSeconds,
+    perSideRestSeconds,
     installedAt,
     lastBackupAt,
     backupSnoozedUntil,
@@ -194,6 +196,7 @@ export default function App() {
             sessions={state.sessions}
             rules={state.rules}
             restSeconds={state.restSeconds}
+            perSideRestSeconds={state.perSideRestSeconds}
             lastBackupAt={state.lastBackupAt}
             backupSnoozedUntil={state.backupSnoozedUntil}
             onOpenSession={setRunningId}
@@ -209,6 +212,7 @@ export default function App() {
             exercises={state.exercises}
             rules={state.rules}
             restSeconds={state.restSeconds}
+            perSideRestSeconds={state.perSideRestSeconds}
             goals={state.goals}
             installedAt={state.installedAt}
             onChanged={reload}
@@ -237,6 +241,7 @@ export default function App() {
             theme={state.theme}
             persisted={state.persisted}
             restSeconds={state.restSeconds}
+            perSideRestSeconds={state.perSideRestSeconds}
             rules={state.rules}
             lastBackupAt={state.lastBackupAt}
             intervals={state.intervals}

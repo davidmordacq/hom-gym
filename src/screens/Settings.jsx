@@ -23,7 +23,7 @@ const REST_MAX = 300
 
 const formatRest = (seconds) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
 
-export default function Settings({ db, theme, persisted, restSeconds, rules, lastBackupAt, intervals, exercises, corePool, onChanged }) {
+export default function Settings({ db, theme, persisted, restSeconds, perSideRestSeconds, rules, lastBackupAt, intervals, exercises, corePool, onChanged }) {
   const [message, setMessage] = useState(null)
   const [goal, setGoal] = useState({ min: rules.repRange.min, max: rules.repRange.max, sets: rules.targetSets })
   const [goalErrors, setGoalErrors] = useState([])
@@ -52,11 +52,12 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, las
     }
   }
 
-  async function changeRest(delta) {
-    const next = Math.min(REST_MAX, Math.max(REST_MIN, restSeconds + delta))
-    if (next === restSeconds) return
+  // key: 'restSeconds' (descanso normal) o 'perSideRestSeconds' (ejercicios a una pierna o un brazo).
+  async function changeRest(key, current, delta) {
+    const next = Math.min(REST_MAX, Math.max(REST_MIN, current + delta))
+    if (next === current) return
     try {
-      await setSetting(db, 'restSeconds', next)
+      await setSetting(db, key, next)
       await onChanged()
     } catch (error) {
       setMessage({ kind: 'error', text: `No se pudo guardar el descanso: ${error.message}` })
@@ -152,17 +153,42 @@ export default function Settings({ db, theme, persisted, restSeconds, rules, las
         <div className="item-row">
           <span className="muted">Cuenta atrás tras cada serie. Avisa cuando quedan 15 s.</span>
           <div className="stepper" role="group" aria-label="Descanso entre series">
-            <button type="button" className="step-btn" aria-label="Menos descanso" onClick={() => changeRest(-REST_STEP)}>
+            <button type="button" className="step-btn" aria-label="Menos descanso" onClick={() => changeRest('restSeconds', restSeconds, -REST_STEP)}>
               −
             </button>
             <span className="step-value" aria-live="polite">
               {formatRest(restSeconds)}
             </span>
-            <button type="button" className="step-btn" aria-label="Más descanso" onClick={() => changeRest(REST_STEP)}>
+            <button type="button" className="step-btn" aria-label="Más descanso" onClick={() => changeRest('restSeconds', restSeconds, REST_STEP)}>
               +
             </button>
           </div>
         </div>
+        <div className="item-row">
+          <span className="muted">En ejercicios a una pierna o un brazo (mientras trabaja un lado, el otro ya descansa).</span>
+          <div className="stepper" role="group" aria-label="Descanso en ejercicios a una pierna">
+            <button
+              type="button"
+              className="step-btn"
+              aria-label="Menos descanso a una pierna"
+              onClick={() => changeRest('perSideRestSeconds', perSideRestSeconds, -REST_STEP)}
+            >
+              −
+            </button>
+            <span className="step-value" aria-live="polite">
+              {formatRest(perSideRestSeconds)}
+            </span>
+            <button
+              type="button"
+              className="step-btn"
+              aria-label="Más descanso a una pierna"
+              onClick={() => changeRest('perSideRestSeconds', perSideRestSeconds, REST_STEP)}
+            >
+              +
+            </button>
+          </div>
+        </div>
+        <p className="muted small">Se aplica a las sesiones que empieces a partir de ahora; la que tengas en curso mantiene el suyo.</p>
       </section>
 
       <section className="card">

@@ -95,11 +95,14 @@ describe('estimateMinutes', () => {
     expect(estimateMinutes(upper, exercises)).toBe(55)
   })
 
-  it('las series de cada lado duran el doble y las 50 sentadillas cuentan unos 2 min: el tren inferior sale en 60 min', () => {
-    // 5 min + 1 × (125 + 120) s + 4 × 3 × (90 + 120) s + 1 × 3 × (45 + 120) s = 5 + 4,08 + 42 + 8,25 = 59,3 → 60
-    expect(estimateMinutes(lower, exercises)).toBe(60)
+  it('a una pierna: series el doble de largas pero descanso de 1 min; las 50 sentadillas cuentan unos 2 min: tren inferior en 45 min', () => {
+    // 5 min + 1 × (125 + 120) s + 4 × 3 × (90 + 60) s + 1 × 3 × (45 + 120) s = 5 + 4,08 + 30 + 8,25 = 47,3 → 45
+    expect(estimateMinutes(lower, exercises)).toBe(45)
+    // con el descanso largo de antes en los ejercicios a una pierna saldría a 60 min
+    expect(estimateMinutes(lower, exercises, { perSideRestSeconds: 120 })).toBe(60)
     const sinLados = { items: lower.items.map((i) => ({ ...i, perSide: false })) }
-    expect(estimateMinutes(sinLados, exercises)).toBeLessThan(estimateMinutes(lower, exercises))
+    // con el mismo descanso (1 min) en todas, hacerlo con cada lado alarga la sesión
+    expect(estimateMinutes(sinLados, exercises, { restSeconds: 60 })).toBeLessThan(estimateMinutes(lower, exercises))
   })
 
   it('una serie larga (50 repeticiones) cuenta más que una normal, y una de 10 sigue contando 45 s', () => {

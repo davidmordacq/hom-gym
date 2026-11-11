@@ -253,7 +253,7 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
       setSets((current) => [...current.filter((s) => s.id !== set.id), set])
       await persist({ ...touchExercise(session, entry.exerciseId, now), coreBag: draw.bag, lastCoreId: draw.id ?? session.lastCoreId ?? null })
       setRest({ exerciseId: entry.exerciseId, order: activeOrder })
-      timer.start(restSeconds)
+      timer.start(entry.restSeconds ?? restSeconds) // los ejercicios a una pierna llevan su descanso más corto
       setWatch(null)
     } catch (e) {
       setError(`No se pudo guardar la serie: ${e.message}`)

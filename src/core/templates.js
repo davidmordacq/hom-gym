@@ -7,6 +7,8 @@ import { DEFAULT_PROGRESSION_RULES, getRulesForExercise } from './progressionCon
 
 /** Descanso entre series por defecto (2 minutos). En la entrega 1d será un ajuste. */
 export const DEFAULT_REST_SECONDS = 120
+/** Descanso en los ejercicios a una pierna o un brazo: mientras trabaja un lado, el otro ya descansa (David, 2026-11-11). */
+export const DEFAULT_PER_SIDE_REST_SECONDS = 60
 /** Una sesión no debería pasar de aquí (decisión de David: no más de 1 h). */
 export const MAX_SESSION_MINUTES = 60
 export const MAX_SETS_PER_EXERCISE = 10
@@ -86,7 +88,11 @@ export function validateTemplate(input, { exercises = [], templates = [] } = {})
  * Una serie de 8-10 repeticiones se estima en 45 s; las que se hacen con cada lado, el doble.
  * El core en el descanso no suma tiempo: se hace mientras descansas. Es una estimación, no una medida.
  */
-export function estimateMinutes(template, exercises, { restSeconds = DEFAULT_REST_SECONDS, rules = DEFAULT_PROGRESSION_RULES } = {}) {
+export function estimateMinutes(
+  template,
+  exercises,
+  { restSeconds = DEFAULT_REST_SECONDS, perSideRestSeconds = DEFAULT_PER_SIDE_REST_SECONDS, rules = DEFAULT_PROGRESSION_RULES } = {},
+) {
   const known = new Map(exercises.map((e) => [e.id, e]))
   let seconds = WARMUP_MINUTES * 60
   for (const item of template.items ?? []) {
@@ -100,7 +106,7 @@ export function estimateMinutes(template, exercises, { restSeconds = DEFAULT_RES
       work = Math.max(work, getRulesForExercise(exercise, rules).repRange.max * SECONDS_PER_LONG_REP)
     }
     if (item.perSide) work *= 2
-    seconds += sets * (work + restSeconds)
+    seconds += sets * (work + (item.perSide ? perSideRestSeconds : restSeconds))
   }
   return Math.round(seconds / 60 / 5) * 5
 }

@@ -14,7 +14,7 @@ import QuickLog from './QuickLog.jsx'
 const timeOf = (iso) => new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
 
 /** Una sesión de fuerza del plan: propone la que toca, deja cambiarla y empezarla. */
-function StrengthCard({ slot, templates, exercises, sessions, rules, restSeconds, blocked, doneToday, onStart }) {
+function StrengthCard({ slot, templates, exercises, sessions, rules, restSeconds, perSideRestSeconds, blocked, doneToday, onStart }) {
   const [chosen, setChosen] = useState(null)
   const sorted = sortTemplates(templates)
   const suggested = suggestNextTemplateId(templates, sessions)
@@ -48,7 +48,7 @@ function StrengthCard({ slot, templates, exercises, sessions, rules, restSeconds
             </label>
           )}
           <p className="muted small">
-            {template.items.length} ejercicios · {minutesText(estimateMinutes(template, exercises, { rules, restSeconds }))}
+            {template.items.length} ejercicios · {minutesText(estimateMinutes(template, exercises, { rules, restSeconds, perSideRestSeconds }))}
           </p>
           <ol className="today-list">
             {template.items.map((item) => {
@@ -130,7 +130,7 @@ function BackupReminder({ db, status, onChanged }) {
   )
 }
 
-export default function Today({ db, plan, templates, exercises, sessions, rules, restSeconds, lastBackupAt, backupSnoozedUntil, onOpenSession, onChanged }) {
+export default function Today({ db, plan, templates, exercises, sessions, rules, restSeconds, perSideRestSeconds, lastBackupAt, backupSnoozedUntil, onOpenSession, onChanged }) {
   const [logging, setLogging] = useState(null) // { type, slot }
   const [error, setError] = useState(null)
   const now = new Date()
@@ -153,7 +153,7 @@ export default function Today({ db, plan, templates, exercises, sessions, rules,
   async function start(template, slotId = null) {
     setError(null)
     try {
-      const session = startStrengthSession({ template, slotId, restSeconds })
+      const session = startStrengthSession({ template, slotId, restSeconds, perSideRestSeconds })
       await saveSession(db, session)
       await onChanged()
       onOpenSession(session.id)
@@ -254,6 +254,7 @@ export default function Today({ db, plan, templates, exercises, sessions, rules,
               sessions={sessions}
               rules={rules}
               restSeconds={restSeconds}
+              perSideRestSeconds={perSideRestSeconds}
               blocked={Boolean(running)}
               doneToday={slotDoneToday(slot)}
               onStart={start}

@@ -7,6 +7,7 @@ import { levelsEasyToHard, mainMuscleGroup } from './exercises.js'
 import { EXERCISE_UNITS, RANDOM_CORE, SESSION_STATUS, SESSION_TYPES } from './model.js'
 import { DEFAULT_PROGRESSION_RULES, getRulesForExercise } from './progressionConfig.js'
 import { findLevel } from './resistance.js'
+import { DEFAULT_PER_SIDE_REST_SECONDS, DEFAULT_REST_SECONDS } from './templates.js'
 
 /** Segundos que quedan de descanso cuando suena el aviso para prepararse. */
 export const WARNING_SECONDS = 15
@@ -18,7 +19,14 @@ export const setId = (sessionId, exerciseId, order) => `${sessionId}:${exerciseI
 export const repStep = (exercise) => (exercise?.unit === EXERCISE_UNITS.SECONDS ? 5 : 1)
 
 /** Crea una sesión de fuerza nueva a partir de una sesión tipo. Guarda una COPIA de sus ejercicios. */
-export function startStrengthSession({ template, slotId = null, now = new Date(), id = newSessionId(now.getTime()), restSeconds = 120 }) {
+export function startStrengthSession({
+  template,
+  slotId = null,
+  now = new Date(),
+  id = newSessionId(now.getTime()),
+  restSeconds = DEFAULT_REST_SECONDS,
+  perSideRestSeconds = DEFAULT_PER_SIDE_REST_SECONDS,
+}) {
   const startedAt = now.toISOString()
   return {
     restSeconds, // el descanso que había al empezar: sirve para calcular el tiempo del core en los descansos
@@ -39,6 +47,7 @@ export function startStrengthSession({ template, slotId = null, now = new Date()
       exerciseId: item.exerciseId,
       targetSets: item.sets,
       perSide: Boolean(item.perSide),
+      restSeconds: item.perSide ? perSideRestSeconds : restSeconds, // descanso de este ejercicio (a una pierna, más corto)
       coreExerciseId: item.coreExerciseId ?? null,
       notes: '',
       startedAt: i === 0 ? startedAt : null,

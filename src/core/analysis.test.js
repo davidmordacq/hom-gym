@@ -95,6 +95,14 @@ describe('sessionStats: el tiempo real se reparte por ejercicio y grupo principa
       expect(byGroup.chest.seconds).toBe(480 - 45)
     })
 
+    it('un ejercicio con su propio descanso (a una pierna, 60 s) cuenta 45 s de core aunque la sesión sea de 2 min', () => {
+      const own = session('s1', '2026-11-09', {
+        exercises: [{ exerciseId: 'push-up', coreExerciseId: 'dead-bug', restSeconds: 60 }, { exerciseId: 'assisted-pull-up', coreExerciseId: 'dead-bug' }],
+      })
+      const { byGroup } = sessionStats(own, [set('s1', 'push-up', 1, 10, '18:05:00', { coreAfter: true }), set('s1', 'push-up', 2, 9, '18:08:00')], exercises)
+      expect(byGroup.core.seconds).toBe(45)
+    })
+
     it('si la sesión es antigua y no guardó el descanso, supone 2 minutos', () => {
       const old = session('s1', '2026-11-09')
       delete old.restSeconds
