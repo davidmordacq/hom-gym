@@ -133,6 +133,27 @@ export async function seedPlanksInCorePoolIfNeeded(db) {
 }
 
 /**
+ * Pone «50 sentadillas normales» como primer ejercicio de la sesión Tren inferior que David ya tuviera (una sola vez;
+ * ajuste "lowerSquatsAdded"). Si ya la había cambiado o borrado, o el ejercicio no existe, no toca nada. En una
+ * instalación nueva la sesión de partida ya lo lleva. Ejecutar DESPUÉS de seedLibraryIfNeeded y seedTemplatesIfNeeded.
+ * Devuelve true si cambió la sesión.
+ */
+export async function seedLowerSquatsIfNeeded(db) {
+  if (await getSetting(db, 'lowerSquatsAdded', false)) return false
+  const [exercises, templates] = await Promise.all([getAll(db, 'exercises'), getAll(db, 'templates')])
+  if (exercises.length === 0 || templates.length === 0) return false // se intentará otra vez más adelante
+  const lower = templates.find((t) => t.id === 'tpl-lower')
+  const squat = DEFAULT_TEMPLATES.find((t) => t.id === 'tpl-lower').items[0]
+  const settings = [{ key: 'lowerSquatsAdded', value: true }]
+  if (!lower || !exercises.some((e) => e.id === squat.exerciseId) || lower.items.some((i) => i.exerciseId === squat.exerciseId)) {
+    await writeAll(db, { settings })
+    return false
+  }
+  await writeAll(db, { templates: [{ ...lower, items: [{ ...squat }, ...lower.items] }], settings })
+  return true
+}
+
+/**
  * Carga las sesiones de fuerza de partida (tren superior e inferior) la primera vez.
  * Se hace UNA sola vez por dispositivo (ajuste "templatesSeeded"): si luego las cambias o las borras, no vuelven.
  * Quita de ellas los ejercicios que no existan en este dispositivo. Ejecutar DESPUÉS de seedLibraryIfNeeded.

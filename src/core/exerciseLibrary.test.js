@@ -52,7 +52,11 @@ describe('biblioteca inicial de ejercicios', () => {
       expect(exercise.rules.repRange.min).toBeGreaterThanOrEqual(20)
       expect(getRulesForExercise(exercise).repRange).toEqual({ min: 30, max: 45 })
     }
-    for (const exercise of DEFAULT_EXERCISES.filter((e) => e.unit !== 'seconds')) expect(exercise.rules).toBeUndefined()
+    // Salvo las 50 sentadillas normales, que tienen su propio objetivo: una serie de 50 repeticiones.
+    for (const exercise of DEFAULT_EXERCISES.filter((e) => e.unit !== 'seconds' && e.id !== 'bodyweight-squat')) {
+      expect(exercise.rules).toBeUndefined()
+    }
+    expect(getRulesForExercise(DEFAULT_EXERCISES.find((e) => e.id === 'bodyweight-squat')).repRange).toEqual({ min: 50, max: 50 })
   })
 
   it('los ejercicios originales no se han tocado: siguen todos y con el mismo id', () => {

@@ -180,7 +180,8 @@ export function levelsEasyToHard(exercise, scale) {
 export function targetText(exercise, globalRules) {
   const { repRange, targetSets } = getRulesForExercise(exercise, globalRules)
   const unitWord = exercise.unit === EXERCISE_UNITS.SECONDS ? 'segundos' : 'repeticiones'
-  return `${targetSets} series de ${repRange.min}-${repRange.max} ${unitWord}`
+  const amount = repRange.min === repRange.max ? `${repRange.max}` : `${repRange.min}-${repRange.max}`
+  return `${targetSets} series de ${amount} ${unitWord}`
 }
 
 /** Ordena los ejercicios por grupo muscular principal (el primero de su lista) y luego por nombre. */

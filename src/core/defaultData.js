@@ -110,6 +110,7 @@ export const DEFAULT_TEMPLATES = [
     name: 'Tren inferior',
     order: 2,
     items: [
+      { exerciseId: 'bodyweight-squat', sets: 1, perSide: false, coreExerciseId: null },
       { exerciseId: 'bulgarian-split-squat', sets: 3, perSide: true, coreExerciseId: 'random' },
       { exerciseId: 'single-leg-rdl', sets: 3, perSide: true, coreExerciseId: 'random' },
       { exerciseId: 'single-leg-bridge', sets: 3, perSide: true, coreExerciseId: 'random' },

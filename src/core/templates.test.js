@@ -95,11 +95,18 @@ describe('estimateMinutes', () => {
     expect(estimateMinutes(upper, exercises)).toBe(55)
   })
 
-  it('las series de cada lado duran el doble: el tren inferior (4 de 5 ejercicios por lado) sale en 55 min', () => {
-    // 5 min + 4 × 3 × (90 + 120) s + 1 × 3 × (45 + 120) s = 5 + 42 + 8,25 = 55,25 → 55
-    expect(estimateMinutes(lower, exercises)).toBe(55)
+  it('las series de cada lado duran el doble y las 50 sentadillas cuentan unos 2 min: el tren inferior sale en 60 min', () => {
+    // 5 min + 1 × (125 + 120) s + 4 × 3 × (90 + 120) s + 1 × 3 × (45 + 120) s = 5 + 4,08 + 42 + 8,25 = 59,3 → 60
+    expect(estimateMinutes(lower, exercises)).toBe(60)
     const sinLados = { items: lower.items.map((i) => ({ ...i, perSide: false })) }
     expect(estimateMinutes(sinLados, exercises)).toBeLessThan(estimateMinutes(lower, exercises))
+  })
+
+  it('una serie larga (50 repeticiones) cuenta más que una normal, y una de 10 sigue contando 45 s', () => {
+    const one = (id, sets) => ({ items: [{ exerciseId: id, sets, perSide: false }] })
+    const long = estimateMinutes(one('bodyweight-squat', 4), exercises)
+    const normal = estimateMinutes(one('goblet-squat', 4), exercises)
+    expect(long).toBeGreaterThan(normal)
   })
 
   it('más descanso, más tiempo', () => {

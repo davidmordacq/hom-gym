@@ -42,6 +42,18 @@ export const DEFAULT_EXERCISES = [
       'Sujeta el saco contra el pecho (o ponte la mochila) y baja con la espalda recta hasta que los muslos queden paralelos al suelo. Para 20 kg: mochila puesta y saco en las manos.',
   },
   {
+    id: 'bodyweight-squat',
+    name: 'Sentadilla normal (peso corporal)',
+    muscleGroups: ['quads', 'glutes'],
+    resistanceType: R,
+    scaleId: null,
+    rules: { repRange: { min: 50, max: 50 } },
+    videoUrl: watch('yluv--sqkNo'),
+    videoChannel: 'Trainer Alex León',
+    notes:
+      'Una serie de 50 repeticiones seguidas, sin peso (es el primer ejercicio del tren inferior). Pies a la anchura de los hombros, baja con la espalda recta hasta que los muslos queden paralelos al suelo y sube empujando con los talones. Si hace falta, para unos segundos a mitad de la serie y sigue.',
+  },
+  {
     id: 'romanian-deadlift',
     name: 'Peso muerto rumano con lastre',
     muscleGroups: ['hamstrings', 'glutes', 'back'],

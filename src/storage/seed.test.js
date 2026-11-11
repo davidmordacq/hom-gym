@@ -4,7 +4,8 @@ import { DEFAULT_SCALES } from '../core/defaultData.js'
 import { DEFAULT_EXERCISES, ORIGINAL_LIBRARY_IDS } from '../core/exerciseLibrary.js'
 import { get, getAll, getSetting, openDb, put, putMany, remove, replaceAll } from './db.js'
 import {
-  seedIfNeeded, seedLibraryIfNeeded, seedPlanksInCorePoolIfNeeded, seedScaleLevelsIfNeeded, seedTemplatesIfNeeded,
+  seedIfNeeded, seedLibraryIfNeeded, seedLowerSquatsIfNeeded, seedPlanksInCorePoolIfNeeded, seedScaleLevelsIfNeeded,
+  seedTemplatesIfNeeded,
 } from './seed.js'
 
 let db
@@ -186,7 +187,7 @@ describe('seedTemplatesIfNeeded (sesiones de partida)', () => {
     const templates = await getAll(db, 'templates')
     expect(templates.map((t) => t.id).sort()).toEqual(['tpl-lower', 'tpl-upper'])
     expect(templates.find((t) => t.id === 'tpl-upper').items).toHaveLength(6)
-    expect(templates.find((t) => t.id === 'tpl-lower').items).toHaveLength(5)
+    expect(templates.find((t) => t.id === 'tpl-lower').items).toHaveLength(6)
   })
 
   it('solo una vez: lo que borres o cambies no vuelve a cambiar', async () => {
@@ -248,6 +249,50 @@ describe('seedPlanksInCorePoolIfNeeded (planchas en el core de los descansos)', 
     await put(db, 'settings', { key: 'corePool', value: ['plank', 'dead-bug'] })
     await seedPlanksInCorePoolIfNeeded(db)
     expect(await getSetting(db, 'corePool', null)).toEqual(['plank', 'dead-bug', 'side-plank'])
+  })
+})
+
+describe('seedLowerSquatsIfNeeded (50 sentadillas primero en Tren inferior)', () => {
+  const OLD_LOWER = {
+    id: 'tpl-lower',
+    name: 'Tren inferior',
+    order: 2,
+    items: [{ exerciseId: 'bulgarian-split-squat', sets: 3, perSide: true, coreExerciseId: 'random' }],
+  }
+  const firstOf = async () => (await get(db, 'templates', 'tpl-lower')).items.map((i) => i.exerciseId)
+
+  it('en un móvil con la sesión antigua, la pone la primera con 1 serie, y solo una vez', async () => {
+    await seedLibraryIfNeeded(db)
+    await put(db, 'templates', OLD_LOWER)
+    expect(await seedLowerSquatsIfNeeded(db)).toBe(true)
+    expect(await firstOf()).toEqual(['bodyweight-squat', 'bulgarian-split-squat'])
+    expect((await get(db, 'templates', 'tpl-lower')).items[0]).toMatchObject({ sets: 1, perSide: false, coreExerciseId: null })
+    // si luego la quita o la mueve, no vuelve a tocarse
+    await put(db, 'templates', OLD_LOWER)
+    expect(await seedLowerSquatsIfNeeded(db)).toBe(false)
+    expect(await firstOf()).toEqual(['bulgarian-split-squat'])
+  })
+
+  it('en una instalación nueva la sesión de partida ya la lleva primera y no se duplica', async () => {
+    await seedIfNeeded(db)
+    await seedLibraryIfNeeded(db)
+    await seedTemplatesIfNeeded(db)
+    expect((await firstOf())[0]).toBe('bodyweight-squat')
+    expect(await seedLowerSquatsIfNeeded(db)).toBe(false)
+    expect((await firstOf()).filter((id) => id === 'bodyweight-squat')).toHaveLength(1)
+  })
+
+  it('si no hay sesión Tren inferior (la borró) no la crea', async () => {
+    await seedLibraryIfNeeded(db)
+    await put(db, 'templates', { ...OLD_LOWER, id: 'otra', name: 'Otra' })
+    expect(await seedLowerSquatsIfNeeded(db)).toBe(false)
+    expect(await get(db, 'templates', 'tpl-lower')).toBeUndefined()
+  })
+
+  it('sin ejercicios cargados no hace nada ni apunta la marca (se intentará más adelante)', async () => {
+    await put(db, 'templates', OLD_LOWER)
+    expect(await seedLowerSquatsIfNeeded(db)).toBe(false)
+    expect(await getSetting(db, 'lowerSquatsAdded', false)).toBe(false)
   })
 })
 

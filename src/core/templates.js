@@ -13,6 +13,7 @@ export const MAX_SETS_PER_EXERCISE = 10
 
 const WARMUP_MINUTES = 5
 const SECONDS_PER_REP_SET = 45 // una serie de 8-10 repeticiones
+const SECONDS_PER_LONG_REP = 2.5 // en series largas: solo cuenta si pasa de los 45 s (más de 18 repeticiones)
 const SECONDS_OF_PREPARATION = 10 // colocarse antes de una serie en segundos
 
 export const newTemplateId = (now = Date.now()) => `tpl-${now.toString(36)}-${Math.random().toString(36).slice(2, 6)}`
@@ -94,6 +95,9 @@ export function estimateMinutes(template, exercises, { restSeconds = DEFAULT_RES
     let work = SECONDS_PER_REP_SET
     if (exercise?.unit === EXERCISE_UNITS.SECONDS) {
       work = getRulesForExercise(exercise, rules).repRange.max + SECONDS_OF_PREPARATION
+    } else if (exercise) {
+      // Series largas (las 50 sentadillas): unos 2,5 s por repetición en vez de los 45 s de una serie normal.
+      work = Math.max(work, getRulesForExercise(exercise, rules).repRange.max * SECONDS_PER_LONG_REP)
     }
     if (item.perSide) work *= 2
     seconds += sets * (work + restSeconds)
@@ -107,7 +111,8 @@ export function itemTargetText(item, exercise, rules = DEFAULT_PROGRESSION_RULES
   if (!exercise) return series
   const { repRange } = getRulesForExercise(exercise, rules)
   const unitWord = exercise.unit === EXERCISE_UNITS.SECONDS ? 'segundos' : 'repeticiones'
-  return `${series} de ${repRange.min}-${repRange.max} ${unitWord}${item.perSide ? ' por lado' : ''}`
+  const amount = repRange.min === repRange.max ? `${repRange.max}` : `${repRange.min}-${repRange.max}`
+  return `${series} de ${amount} ${unitWord}${item.perSide ? ' por lado' : ''}`
 }
 
 /** Texto de la duración, por ejemplo "unos 55 min". */
