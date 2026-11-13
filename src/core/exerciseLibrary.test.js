@@ -47,10 +47,11 @@ describe('biblioteca inicial de ejercicios', () => {
 
   it('los ejercicios en segundos tienen su propio rango y los demás usan repeticiones', () => {
     const inSeconds = DEFAULT_EXERCISES.filter((e) => e.unit === 'seconds')
-    expect(inSeconds.map((e) => e.id).sort()).toEqual(['plank', 'side-plank'])
+    expect(inSeconds.map((e) => e.id).sort()).toEqual(['boat-hold', 'plank', 'side-plank'])
     for (const exercise of inSeconds) {
       expect(exercise.rules.repRange.min).toBeGreaterThanOrEqual(20)
-      expect(getRulesForExercise(exercise).repRange).toEqual({ min: 30, max: 45 })
+      const expected = exercise.id === 'boat-hold' ? { min: 20, max: 40 } : { min: 30, max: 45 }
+      expect(getRulesForExercise(exercise).repRange).toEqual(expected)
     }
     // Salvo las 50 sentadillas normales, que tienen su propio objetivo: una serie de 50 repeticiones.
     for (const exercise of DEFAULT_EXERCISES.filter((e) => e.unit !== 'seconds' && e.id !== 'bodyweight-squat')) {
@@ -115,6 +116,13 @@ describe('core y lumbares para los descansos', () => {
     expect(CORE_REST_POOL_IDS).toContain('side-plank')
     expect(new Set(CORE_REST_POOL_IDS).size).toBe(CORE_REST_POOL_IDS.length)
     expect(CORE_REST_POOL_IDS.length).toBeGreaterThanOrEqual(8)
+  })
+  it('el boat hold está en la biblioteca como ejercicio de core en segundos, con vídeo, y no entra solo en el conjunto de los descansos', () => {
+    const boat = byId.get('boat-hold')
+    expect(boat).toMatchObject({ muscleGroups: ['core'], unit: 'seconds' })
+    expect(boat.videoUrl).toMatch(/JjbulKAmYxU/)
+    expect(ORIGINAL_LIBRARY_IDS).not.toContain('boat-hold')
+    expect(CORE_REST_POOL_IDS).not.toContain('boat-hold')
   })
   it('hay al menos 3 ejercicios de lumbares en el conjunto', () => {
     expect(CORE_REST_POOL_IDS.filter((id) => byId.get(id).muscleGroups[0] === 'back').length).toBeGreaterThanOrEqual(3)

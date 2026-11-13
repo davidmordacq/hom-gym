@@ -648,7 +648,36 @@ p {
 .nav-grid .btn {
   flex: none;
   min-height: 56px;
-  padding: 0 8px;
+  height: auto;
+  padding: 8px;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+}
+
+.btn-sub {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 500;
+  opacity: 0.85;
+  text-align: center;
+}
+
+.next-up {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.next-up strong {
+  color: var(--text, inherit);
+}
+
+.rest-next {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  opacity: 0.9;
 }
 
 .video-toggle {

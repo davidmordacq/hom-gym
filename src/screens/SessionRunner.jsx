@@ -223,6 +223,9 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
   const value = draft.reps[key] ?? fallbackReps ?? (exercise ? defaultReps(activeOrder, last, exercise, rules) : 1)
   const step = repStep(exercise)
   const isLastExercise = session.cursor === session.exercises.length - 1
+  // Qué viene después: el nombre del siguiente ejercicio (David quiere verlo, no solo "siguiente ejercicio").
+  const nextEntry = session.exercises[session.cursor + 1] ?? null
+  const nextName = nextEntry ? (byExercise.get(nextEntry.exerciseId)?.name ?? 'Ejercicio que ya no existe') : null
   const videoId = exercise ? parseYoutubeId(exercise.videoUrl) : null
   const watching = watch?.key === key
   const elapsed = watching ? Math.floor((clock - watch.startedAt) / 1000) : 0
@@ -370,6 +373,7 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
         Ejercicio {session.cursor + 1} de {session.exercises.length}
       </p>
       <h1>{exercise?.name ?? 'Ejercicio que ya no existe'}</h1>
+      <p className="next-up">{nextName ? <>Siguiente ejercicio: <strong>{nextName}</strong></> : 'Es el último ejercicio de la sesión.'}</p>
 
       {exercise && (
         <section className="card">
@@ -526,11 +530,13 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
           </button>
         ) : activeOrder <= rowCount ? (
           <button type="button" className="btn btn-secondary" onClick={skipCurrentExercise}>
-            Saltar ejercicio →
+            <span>Saltar ejercicio →</span>
+            <span className="btn-sub">pasar a: {nextName}</span>
           </button>
         ) : (
           <button type="button" className="btn btn-primary" onClick={() => goTo(session.cursor + 1)}>
-            Siguiente ejercicio →
+            <span>Siguiente →</span>
+            <span className="btn-sub">{nextName}</span>
           </button>
         )}
       </div>
@@ -566,6 +572,13 @@ export default function SessionRunner({ db, sessionId, exercises, scales, rules,
             <span className="muted small">Aguanta unos 30-40 s (la lateral, unos 20 s de cada lado).</span>
           )}
           {!restCore && restPhase !== 'done' && <span className="muted small">Descanso puro</span>}
+          <span className="rest-next">
+            {activeOrder <= rowCount
+              ? `Ahora: serie ${activeOrder} de ${rowCount} de este ejercicio`
+              : nextName
+                ? `Después: ${nextName}`
+                : 'Después: terminar la sesión'}
+          </span>
           <button
             type="button"
             className="btn btn-secondary rest-skip"

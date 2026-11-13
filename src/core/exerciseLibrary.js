@@ -396,6 +396,19 @@ export const DEFAULT_EXERCISES = [
     notes: 'Se mide en segundos. Apoyado en un antebrazo y el lateral del pie, cuerpo recto. Una serie son los segundos de cada lado.',
   },
   {
+    id: 'boat-hold',
+    name: 'Boat hold (postura del bote)',
+    muscleGroups: ['core'],
+    resistanceType: R,
+    scaleId: null,
+    unit: SECONDS,
+    rules: { repRange: { min: 20, max: 40 } },
+    videoUrl: watch('JjbulKAmYxU'),
+    videoChannel: 'CiudadYOGA',
+    notes:
+      'Se mide en segundos. Sentado con las rodillas dobladas, inclínate un poco hacia atrás con la espalda recta y el pecho abierto, levanta los pies y estira las piernas formando una V (si cuesta, deja las rodillas dobladas con las espinillas paralelas al suelo). Aguanta respirando con normalidad. Si la zona lumbar se redondea o te molesta, dobla más las rodillas. El vídeo es de yoga (la llaman navasana): vale para ver la postura.',
+  },
+  {
     id: 'dead-bug',
     name: 'Bicho muerto (dead bug)',
     muscleGroups: ['core'],
